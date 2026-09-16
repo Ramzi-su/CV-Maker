@@ -30,6 +30,8 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
   const [activeTab, setActiveTab] = useState('contact');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  if (!profile) return null;
+
   const updateContact = (field, val) => {
     onChange({ ...profile, contact: { ...profile.contact, [field]: val } });
   };

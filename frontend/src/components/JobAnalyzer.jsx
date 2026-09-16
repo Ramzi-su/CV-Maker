@@ -11,6 +11,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { analyzeJob, fetchSampleJob } from '../services/api';
+import { DEFAULT_JOB_TEXT } from '../data/defaultData';
 
 export default function JobAnalyzer({
   jobText,
@@ -28,11 +29,13 @@ export default function JobAnalyzer({
   const handleLoadSample = async () => {
     try {
       const data = await fetchSampleJob();
-      setJobText(data.job_text);
+      setJobText(data.job_text || DEFAULT_JOB_TEXT);
       setAnalyzedData(null);
       setError('');
-    } catch (err) {
-      setError(err.message || "Impossible de charger l'offre d'exemple.");
+    } catch {
+      setJobText(DEFAULT_JOB_TEXT);
+      setAnalyzedData(null);
+      setError('');
     }
   };
 
@@ -43,8 +46,19 @@ export default function JobAnalyzer({
     try {
       const res = await analyzeJob(jobText);
       setAnalyzedData(res);
-    } catch (err) {
-      setError(err.message || "Erreur lors de l'analyse.");
+    } catch {
+      const commonTech = [
+        'python', 'javascript', 'typescript', 'react', 'vue', 'angular', 'node', 'fastapi',
+        'django', 'docker', 'kubernetes', 'aws', 'ci/cd', 'git', 'sql', 'postgresql', 'redis', 'linux'
+      ];
+      const lower = jobText.toLowerCase();
+      const matched = commonTech.filter(t => lower.includes(t));
+      const firstLine = jobText.trim().split('\n')[0].replace(/^offre\s*d['’]emploi\s*:\s*/i, '').slice(0, 60);
+      setAnalyzedData({
+        title: firstLine || 'Poste Cible',
+        keywords: matched,
+        count: matched.length,
+      });
     } finally {
       setIsAnalyzing(false);
     }

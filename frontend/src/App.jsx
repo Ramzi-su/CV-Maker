@@ -23,6 +23,7 @@ import {
   fetchTemplates,
   tailorResume,
 } from './services/api';
+import { DEFAULT_PROFILE, DEFAULT_JOB_TEXT, DEFAULT_TEMPLATES } from './data/defaultData';
 
 const STEPS = [
   { id: 'profile', label: 'Profil Maître', shortLabel: 'Profil', icon: User, num: '1', desc: 'Vos informations complètes' },
@@ -32,10 +33,24 @@ const STEPS = [
 
 export default function App() {
   const [activeStep, setActiveStep] = useState('job');
-  const [profile, setProfile] = useState(null);
-  const [jobText, setJobText] = useState('');
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cvmaker_profile');
+      return saved ? JSON.parse(saved) : DEFAULT_PROFILE;
+    } catch {
+      return DEFAULT_PROFILE;
+    }
+  });
+  const [jobText, setJobText] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cvmaker_job');
+      return saved !== null ? saved : DEFAULT_JOB_TEXT;
+    } catch {
+      return DEFAULT_JOB_TEXT;
+    }
+  });
   const [tailoredCV, setTailoredCV] = useState(null);
-  const [templates, setTemplates] = useState([]);
+  const [templates, setTemplates] = useState(DEFAULT_TEMPLATES);
   const [selectedTemplate, setSelectedTemplate] = useState('modern');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -53,16 +68,23 @@ export default function App() {
   useEffect(() => {
     async function init() {
       try {
-        const [profData, jobData, tplData] = await Promise.all([
+        const [profData, jobData, tplData] = await Promise.allSettled([
           fetchProfile(),
           fetchSampleJob(),
           fetchTemplates(),
         ]);
-        setProfile(profData);
-        setJobText(jobData.job_text || '');
-        setTemplates(tplData);
+        if (profData.status === 'fulfilled' && profData.value) {
+          setProfile(profData.value);
+          localStorage.setItem('cvmaker_profile', JSON.stringify(profData.value));
+        }
+        if (jobData.status === 'fulfilled' && jobData.value?.job_text) {
+          setJobText(jobData.value.job_text);
+        }
+        if (tplData.status === 'fulfilled' && Array.isArray(tplData.value) && tplData.value.length > 0) {
+          setTemplates(tplData.value);
+        }
       } catch (err) {
-        console.error('Initialization error:', err);
+        console.warn('Backend indisponible, utilisation des données locales :', err);
       } finally {
         setLoading(false);
       }
@@ -76,12 +98,24 @@ export default function App() {
   };
 
   const handleSaveProfile = async () => {
-    if (profile) await saveProfile(profile);
+    if (!profile) return;
+    localStorage.setItem('cvmaker_profile', JSON.stringify(profile));
+    try {
+      await saveProfile(profile);
+    } catch (err) {
+      console.warn('Profil sauvegardé localement :', err);
+    }
   };
 
   const handleResetProfile = async () => {
-    const profData = await fetchProfile();
-    setProfile(profData);
+    try {
+      const profData = await fetchProfile();
+      setProfile(profData);
+      localStorage.setItem('cvmaker_profile', JSON.stringify(profData));
+    } catch {
+      setProfile(DEFAULT_PROFILE);
+      localStorage.setItem('cvmaker_profile', JSON.stringify(DEFAULT_PROFILE));
+    }
   };
 
   const handleImport = (importedData) => {
@@ -310,11 +344,14 @@ export default function App() {
       {/* ========== MAIN CONTENT ========== */}
       <main className="flex-1 lg:ml-[260px] min-h-screen pt-[108px] lg:pt-0">
         <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
-          {activeStep === 'profile' && profile && (
+          {activeStep === 'profile' && (
             <div className="animate-fade-in-up">
               <ProfileEditor
-                profile={profile}
-                onChange={setProfile}
+                profile={profile || DEFAULT_PROFILE}
+                onChange={(p) => {
+                  setProfile(p);
+                  localStorage.setItem('cvmaker_profile', JSON.stringify(p));
+                }}
                 onSave={handleSaveProfile}
                 onReset={handleResetProfile}
                 onOpenImport={() => setIsImportOpen(true)}
