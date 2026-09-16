@@ -442,6 +442,7 @@ export default function App() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImport={handleImport}
+        aiSettings={aiSettings}
       />
     </div>
   );

@@ -3,7 +3,7 @@ import re
 from typing import Optional
 import requests
 from ..models import Profile, TailoredCV
-from .prompts import CV_TAILORING_PROMPT
+from .prompts import CV_TAILORING_PROMPT, CV_EXTRACTION_PROMPT
 
 
 def clean_json_response(text: str) -> str:
@@ -49,3 +49,34 @@ def tailor_with_ollama(
     raw_text = data.get("response", "")
     parsed_json = json.loads(clean_json_response(raw_text))
     return TailoredCV(**parsed_json)
+
+
+def extract_with_ollama(
+    raw_text: str,
+    ollama_url: Optional[str] = "http://localhost:11434",
+    model_name: Optional[str] = None
+) -> Profile:
+    model = model_name or "llama3"
+    endpoint = f"{ollama_url.rstrip('/')}/api/generate"
+
+    full_prompt = f"{CV_EXTRACTION_PROMPT}\n\nTexte brut du CV à extraire :\n{raw_text}"
+
+    body = {
+        "model": model,
+        "prompt": full_prompt,
+        "stream": False,
+        "format": "json",
+    }
+
+    try:
+        resp = requests.post(endpoint, json=body, timeout=120)
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError(f"Impossible de se connecter à Ollama sur {ollama_url}. Assurez-vous qu'Ollama est démarré (`ollama serve`).")
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"Erreur Ollama ({resp.status_code}): {resp.text}")
+
+    data = resp.json()
+    raw_output = data.get("response", "")
+    parsed_json = json.loads(clean_json_response(raw_output))
+    return Profile(**parsed_json)

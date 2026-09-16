@@ -3,7 +3,7 @@ import re
 from typing import Optional
 import requests
 from ..models import Profile, TailoredCV
-from .prompts import CV_TAILORING_PROMPT
+from .prompts import CV_TAILORING_PROMPT, CV_EXTRACTION_PROMPT
 
 
 def clean_json_response(text: str) -> str:
@@ -51,3 +51,37 @@ def tailor_with_gemini(profile: Profile, job_text: str, api_key: str, model_name
 
     parsed_json = json.loads(clean_json_response(raw_text))
     return TailoredCV(**parsed_json)
+
+
+def extract_with_gemini(raw_text: str, api_key: str, model_name: Optional[str] = None) -> Profile:
+    model = model_name or "gemini-1.5-flash"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+
+    full_prompt = f"{CV_EXTRACTION_PROMPT}\n\nTexte brut du CV à extraire :\n{raw_text}"
+
+    body = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": full_prompt}
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "responseMimeType": "application/json"
+        }
+    }
+
+    resp = requests.post(url, json=body, timeout=60)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Erreur API Gemini ({resp.status_code}): {resp.text}")
+
+    data = resp.json()
+    try:
+        raw_output = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        raise RuntimeError(f"Format de réponse Gemini inattendu : {data}")
+
+    parsed_json = json.loads(clean_json_response(raw_output))
+    return Profile(**parsed_json)

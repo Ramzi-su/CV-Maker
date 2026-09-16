@@ -103,11 +103,18 @@ export async function fetchTemplates() {
   return res.json();
 }
 
-export async function extractFromLatex(latexCode) {
+export async function extractFromLatex(latexCode, aiSettings = {}) {
+  const payload = {
+    latex_code: latexCode,
+    provider: aiSettings.provider || 'heuristic',
+    api_key: aiSettings.apiKey || '',
+    model_name: aiSettings.modelName || '',
+    ollama_url: aiSettings.ollamaUrl || 'http://localhost:11434',
+  };
   const res = await fetch(`${API_BASE}/extract-latex`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ latex_code: latexCode }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const err = await res.json();
@@ -116,9 +123,13 @@ export async function extractFromLatex(latexCode) {
   return res.json();
 }
 
-export async function extractFromPdf(file) {
+export async function extractFromPdf(file, aiSettings = {}) {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('provider', aiSettings.provider || 'heuristic');
+  formData.append('api_key', aiSettings.apiKey || '');
+  formData.append('model_name', aiSettings.modelName || '');
+  formData.append('ollama_url', aiSettings.ollamaUrl || 'http://localhost:11434');
 
   const res = await fetch(`${API_BASE}/extract-pdf`, {
     method: 'POST',

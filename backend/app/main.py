@@ -6,7 +6,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, List
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -16,11 +16,13 @@ from .models import (
     TailoredCV,
     GenerateRequest,
     JobOffer,
+    ExtractLatexRequest,
 )
 from .latex.renderer import render_latex
 from .latex.compiler import compile_latex_to_pdf
 from .ai.tailor import tailor_cv
 from .ai.heuristic import extract_keywords_from_text, extract_job_title_from_text
+from .ai.ai_extractor import extract_profile_with_ai
 from .extractor import parse_latex_cv, extract_text_from_pdf, parse_pdf_text_to_profile
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -189,12 +191,25 @@ def download_pdf(filename: str):
 
 
 @app.post("/api/extract-latex")
-def extract_from_latex(payload: Dict[str, str]):
-    latex_code = payload.get("latex_code", "")
+def extract_from_latex(payload: ExtractLatexRequest):
+    latex_code = payload.latex_code
     if not latex_code.strip():
         raise HTTPException(status_code=400, detail="Le code LaTeX ne peut pas être vide.")
 
     try:
+        if payload.provider and payload.provider.lower() != "heuristic":
+            try:
+                profile_data = extract_profile_with_ai(
+                    latex_code, 
+                    payload.provider, 
+                    payload.api_key, 
+                    payload.model_name, 
+                    payload.ollama_url
+                )
+                return profile_data.model_dump()
+            except Exception as e:
+                print(f"Fallback à l'heuristique (Erreur IA): {e}")
+
         profile_data = parse_latex_cv(latex_code)
         return profile_data
     except Exception as e:
@@ -202,7 +217,13 @@ def extract_from_latex(payload: Dict[str, str]):
 
 
 @app.post("/api/extract-pdf")
-async def extract_from_pdf(file: UploadFile = File(...)):
+async def extract_from_pdf(
+    file: UploadFile = File(...),
+    provider: str = Form("heuristic"),
+    api_key: str = Form(""),
+    model_name: str = Form(""),
+    ollama_url: str = Form("http://localhost:11434")
+):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Seuls les fichiers PDF sont acceptés.")
 
@@ -213,6 +234,22 @@ async def extract_from_pdf(file: UploadFile = File(...)):
             tmp_path = tmp.name
 
         raw_text = extract_text_from_pdf(tmp_path)
+        
+        if provider and provider.lower() != "heuristic":
+            try:
+                profile = extract_profile_with_ai(
+                    raw_text, 
+                    provider, 
+                    api_key, 
+                    model_name, 
+                    ollama_url
+                )
+                profile_data = profile.model_dump()
+                profile_data["_raw_text"] = raw_text[:3000]
+                return profile_data
+            except Exception as e:
+                print(f"Fallback à l'heuristique (Erreur IA PDF): {e}")
+                
         profile_data = parse_pdf_text_to_profile(raw_text)
         profile_data["_raw_text"] = raw_text[:3000]
         return profile_data

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { extractFromLatex, extractFromPdf } from '../services/api';
 
-export default function ImportModal({ isOpen, onClose, onImport }) {
+export default function ImportModal({ isOpen, onClose, onImport, aiSettings }) {
   const [activeTab, setActiveTab] = useState('latex');
   const [latexCode, setLatexCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -30,7 +30,7 @@ export default function ImportModal({ isOpen, onClose, onImport }) {
     setError('');
     setPreviewData(null);
     try {
-      const data = await extractFromLatex(latexCode);
+      const data = await extractFromLatex(latexCode, aiSettings);
       setPreviewData(data);
     } catch (err) {
       setError(err.message);
@@ -50,7 +50,7 @@ export default function ImportModal({ isOpen, onClose, onImport }) {
     setError('');
     setPreviewData(null);
     try {
-      const data = await extractFromPdf(file);
+      const data = await extractFromPdf(file, aiSettings);
       setPreviewData(data);
     } catch (err) {
       setError(err.message);
