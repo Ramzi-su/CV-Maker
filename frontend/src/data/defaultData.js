@@ -1,13 +1,13 @@
 export const DEFAULT_PROFILE = {
   contact: {
-    full_name: "Ramzi Mansour",
+    full_name: "Ramzi Moulahi",
     title: "Ingénieur Logiciel Full-Stack & Intelligence Artificielle",
-    email: "ramzi-su@example.com",
+    email: "ramzimoulahi.x@gmail.com",
     phone: "+33 6 12 34 56 78",
     location: "Paris, France",
-    linkedin: "linkedin.com/in/ramzi-mansour",
-    github: "github.com/ramzi-mansour",
-    website: "https://ramzi-portfolio.dev",
+    linkedin: "linkedin.com/in/ramzi-moulahi",
+    github: "github.com/Ramzi-su",
+    website: "https://portofolio-gold-nu.vercel.app/",
   },
   summary: "Ingénieur logiciel passionné par l'architecture logicielle, le développement full-stack moderne et l'intégration de solutions d'IA. Rigoureux et orienté impact, doté d'une forte expérience en Python, React, conteneurisation Docker et automatisation CI/CD.",
   experiences: [
@@ -50,7 +50,7 @@ export const DEFAULT_PROFILE = {
         "Compilation dynamique et sécurisée en LaTeX sans erreur de syntaxe.",
       ],
       technologies: ["React", "FastAPI", "LaTeX", "Python", "TailwindCSS"],
-      link: "https://github.com/ramzi-mansour/cv-maker",
+      link: "https://github.com/Ramzi-su/cv-maker",
     },
     {
       id: "proj-2",
@@ -60,7 +60,7 @@ export const DEFAULT_PROFILE = {
         "Analyse statique AST et détection assistée par LLM avec reporting automatisé.",
       ],
       technologies: ["Python", "Cybersecurity", "Docker", "AST"],
-      link: "https://github.com/ramzi-mansour/ai-security",
+      link: "https://github.com/Ramzi-su/ai-security",
     },
   ],
   skill_categories: [
