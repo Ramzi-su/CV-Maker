@@ -13,6 +13,19 @@ import {
   Upload,
 } from 'lucide-react';
 
+const InputField = ({ label, value, onChange: onCh, placeholder, type = 'text', className = '' }) => (
+  <div className={className}>
+    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{label}</label>
+    <input
+      type={type}
+      value={value}
+      onChange={onCh}
+      placeholder={placeholder}
+      className="input-dark w-full"
+    />
+  </div>
+);
+
 export default function ProfileEditor({ profile, onChange, onSave, onReset, onOpenImport }) {
   const [activeTab, setActiveTab] = useState('contact');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -83,19 +96,6 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
     { id: 'education', label: 'Formations', icon: GraduationCap },
     { id: 'projects', label: 'Projets', icon: FolderGit2 },
   ];
-
-  const InputField = ({ label, value, onChange: onCh, placeholder, type = 'text', className = '' }) => (
-    <div className={className}>
-      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={onCh}
-        placeholder={placeholder}
-        className="input-dark w-full"
-      />
-    </div>
-  );
 
   return (
     <div className="glass-card rounded-2xl shadow-elevation overflow-hidden flex flex-col">
@@ -173,8 +173,9 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
               <InputField label="Site Web" value={profile.contact?.website || ''} onChange={(e) => updateContact('website', e.target.value)} placeholder="https://..." />
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Résumé Professionnel</label>
+              <label htmlFor="profile-summary" className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Résumé Professionnel</label>
               <textarea
+                id="profile-summary"
                 rows={4}
                 value={profile.summary || ''}
                 onChange={(e) => onChange({ ...profile, summary: e.target.value })}
@@ -203,30 +204,31 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-10">
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Poste</label>
-                    <input type="text" value={exp.role} onChange={(e) => updateExperience(idx, 'role', e.target.value)} className="input-dark w-full font-semibold mt-1" />
+                    <label htmlFor={`exp-role-${exp.id || idx}`} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Poste</label>
+                    <input id={`exp-role-${exp.id || idx}`} type="text" value={exp.role} onChange={(e) => updateExperience(idx, 'role', e.target.value)} className="input-dark w-full font-semibold mt-1" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Entreprise</label>
-                    <input type="text" value={exp.company} onChange={(e) => updateExperience(idx, 'company', e.target.value)} className="input-dark w-full mt-1" />
+                    <label htmlFor={`exp-company-${exp.id || idx}`} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Entreprise</label>
+                    <input id={`exp-company-${exp.id || idx}`} type="text" value={exp.company} onChange={(e) => updateExperience(idx, 'company', e.target.value)} className="input-dark w-full mt-1" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Période</label>
+                    <label htmlFor={`exp-start-${exp.id || idx}`} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Période</label>
                     <div className="flex items-center gap-2 mt-1">
-                      <input type="text" value={exp.start_date} onChange={(e) => updateExperience(idx, 'start_date', e.target.value)} placeholder="Début" className="input-dark w-1/2 text-xs" />
+                      <input id={`exp-start-${exp.id || idx}`} type="text" value={exp.start_date} onChange={(e) => updateExperience(idx, 'start_date', e.target.value)} placeholder="Début" className="input-dark w-1/2 text-xs" />
                       <span className="text-slate-600 text-xs">→</span>
                       <input type="text" value={exp.end_date} onChange={(e) => updateExperience(idx, 'end_date', e.target.value)} placeholder="Fin" className="input-dark w-1/2 text-xs" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lieu</label>
-                    <input type="text" value={exp.location || ''} onChange={(e) => updateExperience(idx, 'location', e.target.value)} className="input-dark w-full mt-1" />
+                    <label htmlFor={`exp-location-${exp.id || idx}`} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lieu</label>
+                    <input id={`exp-location-${exp.id || idx}`} type="text" value={exp.location || ''} onChange={(e) => updateExperience(idx, 'location', e.target.value)} className="input-dark w-full mt-1" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Réalisations (1 par ligne)</label>
+                  <label htmlFor={`exp-highlights-${exp.id || idx}`} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Réalisations (1 par ligne)</label>
                   <textarea
+                    id={`exp-highlights-${exp.id || idx}`}
                     rows={3}
                     value={exp.highlights?.join('\n') || ''}
                     onChange={(e) => updateExperience(idx, 'highlights', e.target.value.split('\n').filter((l) => l.trim().length > 0))}
@@ -235,8 +237,9 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Technologies (virgules)</label>
+                  <label htmlFor={`exp-technologies-${exp.id || idx}`} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Technologies (virgules)</label>
                   <input
+                    id={`exp-technologies-${exp.id || idx}`}
                     type="text"
                     value={exp.technologies?.join(', ') || ''}
                     onChange={(e) => updateExperience(idx, 'technologies', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))}
@@ -260,7 +263,7 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {profile.skill_categories?.map((cat, catIdx) => (
-                <div key={catIdx} className="glass-card-interactive rounded-2xl p-4 space-y-3">
+                <div key={cat.id || cat.category} className="glass-card-interactive rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <input
                       type="text"
@@ -274,7 +277,7 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {cat.skills?.map((skill, sIdx) => (
-                      <span key={sIdx} className="tag-dark">
+                      <span key={skill} className="tag-dark">
                         {skill}
                         <button onClick={() => removeSkillFromCat(catIdx, sIdx)} className="text-slate-500 hover:text-red-400 ml-0.5">&times;</button>
                       </span>
@@ -296,7 +299,7 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
         {activeTab === 'education' && (
           <div className="space-y-4 animate-fade-in-up">
             {profile.education?.map((edu, idx) => (
-              <div key={idx} className="glass-card-interactive rounded-2xl p-5">
+              <div key={edu.id || `${edu.degree}-${edu.institution}`} className="glass-card-interactive rounded-2xl p-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <InputField label="Diplôme" value={edu.degree} onChange={(e) => { const u = [...profile.education]; u[idx] = { ...u[idx], degree: e.target.value }; onChange({ ...profile, education: u }); }} />
                   <InputField label="Établissement" value={edu.institution} onChange={(e) => { const u = [...profile.education]; u[idx] = { ...u[idx], institution: e.target.value }; onChange({ ...profile, education: u }); }} />
@@ -312,14 +315,15 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
         {activeTab === 'projects' && (
           <div className="space-y-4 animate-fade-in-up">
             {profile.projects?.map((proj, idx) => (
-              <div key={idx} className="glass-card-interactive rounded-2xl p-5">
+              <div key={proj.id || proj.name} className="glass-card-interactive rounded-2xl p-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <InputField label="Nom du Projet" value={proj.name} onChange={(e) => { const u = [...profile.projects]; u[idx] = { ...u[idx], name: e.target.value }; onChange({ ...profile, projects: u }); }} />
                   <InputField label="Lien" value={proj.link || ''} onChange={(e) => { const u = [...profile.projects]; u[idx] = { ...u[idx], link: e.target.value }; onChange({ ...profile, projects: u }); }} placeholder="https://..." />
                 </div>
                 <div className="mt-3">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Description</label>
+                  <label htmlFor={`proj-desc-${proj.id || idx}`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Description</label>
                   <input
+                    id={`proj-desc-${proj.id || idx}`}
                     type="text"
                     value={proj.description}
                     onChange={(e) => { const u = [...profile.projects]; u[idx] = { ...u[idx], description: e.target.value }; onChange({ ...profile, projects: u }); }}

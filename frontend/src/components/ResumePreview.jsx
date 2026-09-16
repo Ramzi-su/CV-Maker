@@ -60,6 +60,30 @@ export default function ResumePreview({
     }
   };
 
+  const pdfContent = pdfUrl ? (
+    <div className="flex-1 w-full border border-white/[0.06] rounded-2xl overflow-hidden shadow-dark-elevation bg-surface-100 flex flex-col min-h-[550px]">
+      <iframe src={`${pdfUrl}#toolbar=0&navpanes=0`} className="w-full flex-1 rounded-2xl" title="Prévisualisation PDF" />
+    </div>
+  ) : (
+    <div className="flex-1 border-2 border-dashed border-white/[0.08] rounded-2xl flex flex-col items-center justify-center p-8 sm:p-12 text-center">
+      <div className="w-16 h-16 bg-surface-300/50 rounded-2xl flex items-center justify-center mb-4">
+        <FileText className="w-8 h-8 text-slate-600" />
+      </div>
+      <h3 className="font-display text-sm font-bold text-slate-300 mb-1">Aucun PDF généré</h3>
+      <p className="text-xs text-slate-500 max-w-sm mb-5">
+        Cliquez ci-dessous pour compiler votre CV avec le gabarit sélectionné et prévisualiser le résultat.
+      </p>
+      <button
+        onClick={() => handleCompile()}
+        disabled={isCompiling}
+        className="btn-primary flex items-center gap-2 px-6 py-3 text-sm"
+      >
+        {isCompiling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+        Générer le PDF
+      </button>
+    </div>
+  );
+
   return (
     <div className="glass-card rounded-2xl shadow-elevation overflow-hidden flex flex-col min-h-[650px] lg:min-h-[calc(100vh-80px)]">
       {/* Toolbar */}
@@ -143,29 +167,7 @@ export default function ResumePreview({
       {/* Content */}
       <div className="flex-1 p-4 sm:p-6 flex flex-col">
         {viewMode === 'pdf' ? (
-          pdfUrl ? (
-            <div className="flex-1 w-full border border-white/[0.06] rounded-2xl overflow-hidden shadow-dark-elevation bg-surface-100 flex flex-col min-h-[550px]">
-              <iframe src={`${pdfUrl}#toolbar=0&navpanes=0`} className="w-full flex-1 rounded-2xl" title="Prévisualisation PDF" />
-            </div>
-          ) : (
-            <div className="flex-1 border-2 border-dashed border-white/[0.08] rounded-2xl flex flex-col items-center justify-center p-8 sm:p-12 text-center">
-              <div className="w-16 h-16 bg-surface-300/50 rounded-2xl flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-slate-600" />
-              </div>
-              <h3 className="font-display text-sm font-bold text-slate-300 mb-1">Aucun PDF généré</h3>
-              <p className="text-xs text-slate-500 max-w-sm mb-5">
-                Cliquez ci-dessous pour compiler votre CV avec le gabarit sélectionné et prévisualiser le résultat.
-              </p>
-              <button
-                onClick={() => handleCompile()}
-                disabled={isCompiling}
-                className="btn-primary flex items-center gap-2 px-6 py-3 text-sm"
-              >
-                {isCompiling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                Générer le PDF
-              </button>
-            </div>
-          )
+          pdfContent
         ) : (
           <div className="flex-1 flex flex-col space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-500">

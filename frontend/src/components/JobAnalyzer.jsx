@@ -32,7 +32,7 @@ export default function JobAnalyzer({
       setAnalyzedData(null);
       setError('');
     } catch (err) {
-      setError("Impossible de charger l'offre d'exemple.");
+      setError(err.message || "Impossible de charger l'offre d'exemple.");
     }
   };
 
@@ -129,8 +129,8 @@ export default function JobAnalyzer({
             <span className="text-slate-500 bg-white/[0.06] px-2.5 py-0.5 rounded-full border border-white/[0.06] text-[10px] font-bold">{analyzedData.count} mots-clés</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {analyzedData.keywords.map((kw, i) => (
-              <span key={i} className="tag-dark">
+            {analyzedData.keywords.map((kw) => (
+              <span key={kw} className="tag-dark">
                 <Tag className="w-2.5 h-2.5 text-brand-400" />{kw}
               </span>
             ))}
@@ -157,7 +157,7 @@ export default function JobAnalyzer({
           </div>
           {tailoredCV.key_adaptations?.length > 0 && (
             <ul className="text-xs text-slate-400 space-y-1 pl-5 list-disc">
-              {tailoredCV.key_adaptations.map((ad, i) => <li key={i}>{ad}</li>)}
+              {tailoredCV.key_adaptations.map((ad) => <li key={ad}>{ad}</li>)}
             </ul>
           )}
         </div>

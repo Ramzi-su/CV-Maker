@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 export async function fetchProfile() {
   const res = await fetch(`${API_BASE}/profile`);
@@ -85,6 +85,9 @@ export async function compilePdf(template, cvData, latexCode = null) {
   const data = await res.json();
   if (!res.ok || !data.success) {
     throw new Error(data.error || 'Erreur lors de la compilation du PDF');
+  }
+  if (data.download_url && !data.download_url.startsWith('http')) {
+    data.download_url = `${API_BASE.replace(/\/api$/, '')}${data.download_url}`;
   }
   return data;
 }

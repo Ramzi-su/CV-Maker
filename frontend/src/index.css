@@ -337,8 +337,8 @@ select.input-dark option:checked {
 }
 
 .step-indicator-complete {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background: #047857;
+  color: white;
 }
 
 /* ===== Section Header ===== */

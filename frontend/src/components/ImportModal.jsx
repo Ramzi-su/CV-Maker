@@ -157,23 +157,24 @@ export default function ImportModal({ isOpen, onClose, onImport }) {
               <p className="text-xs text-slate-500">
                 Téléversez un fichier <code className="bg-white/[0.06] text-brand-400 px-1.5 py-0.5 rounded font-mono text-[11px]">.pdf</code> de votre CV existant. Le texte sera extrait automatiquement et analysé.
               </p>
-              <div
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-white/[0.08] hover:border-brand-500/40 rounded-2xl p-12 text-center cursor-pointer transition-smooth hover:bg-brand-500/[0.03] group"
+                className="w-full border-2 border-dashed border-white/[0.08] hover:border-brand-500/40 rounded-2xl p-12 text-center cursor-pointer transition-smooth hover:bg-brand-500/[0.03] group"
               >
                 <Upload className="w-10 h-10 text-slate-600 group-hover:text-brand-400 mx-auto mb-3 transition-smooth" />
                 <p className="text-sm font-semibold text-slate-400 group-hover:text-brand-400 transition-smooth">
                   Cliquez pour sélectionner un PDF
                 </p>
                 <p className="text-xs text-slate-600 mt-1">ou glissez-déposez votre fichier ici</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </div>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
               {isProcessing && (
                 <div className="flex items-center justify-center gap-2 py-4 text-sm text-brand-400 font-medium">
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -207,8 +208,8 @@ export default function ImportModal({ isOpen, onClose, onImport }) {
                   { label: 'Compétences', value: `${previewData.skill_categories?.length || 0} catégories` },
                   { label: 'Formations', value: `${previewData.education?.length || 0} détectées` },
                   { label: 'Projets', value: `${previewData.projects?.length || 0} détectés` },
-                ].map((item, idx) => (
-                  <div key={idx} className="glass-card-elevated rounded-xl p-3">
+                ].map((item) => (
+                  <div key={item.label} className="glass-card-elevated rounded-xl p-3">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{item.label}</span>
                     <p className="font-semibold text-slate-200 mt-0.5">{item.value}</p>
                   </div>

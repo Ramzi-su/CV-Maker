@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Sparkles, Cpu, Key, Server, Check, Globe, Thermometer, ChevronDown } from 'lucide-react';
+import { X, Sparkles, Cpu, Key, Server, Check, Globe, ChevronDown } from 'lucide-react';
 
 const PROVIDERS = [
   { id: 'heuristic', name: 'Heuristique', desc: '100% Hors-ligne, instantané', badge: 'Recommandé', badgeColor: 'bg-emerald-500/15 text-emerald-400', needsKey: false, needsModel: false, needsUrl: false },
@@ -20,7 +20,6 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
   const selectedProvider = PROVIDERS.find(p => p.id === formData.provider) || PROVIDERS[0];
 
   const handleProviderSelect = (provId) => {
-    const prov = PROVIDERS.find(p => p.id === provId);
     setFormData({
       ...formData,
       provider: provId,
@@ -33,6 +32,13 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
     onSave(formData);
     onClose();
   };
+
+  let apiKeyPlaceholder = 'sk-...';
+  if (formData.provider === 'gemini') {
+    apiKeyPlaceholder = 'AIzaSy...';
+  } else if (formData.provider === 'groq') {
+    apiKeyPlaceholder = 'gsk_...';
+  }
 
   return (
     <div className="modal-overlay">
@@ -56,13 +62,14 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Provider Grid */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-3">Fournisseur</label>
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-3">Fournisseur</span>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {PROVIDERS.map((prov) => (
-                <div
+                <button
                   key={prov.id}
+                  type="button"
                   onClick={() => handleProviderSelect(prov.id)}
-                  className={`cursor-pointer rounded-xl p-3 border-2 transition-smooth ${
+                  className={`text-left cursor-pointer rounded-xl p-3 border-2 transition-smooth ${
                     formData.provider === prov.id
                       ? 'border-brand-500 bg-brand-500/[0.08] shadow-glow-sm'
                       : 'border-white/[0.06] hover:border-white/[0.12] bg-white/[0.02]'
@@ -80,7 +87,7 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
                   <span className={`inline-block text-[8px] font-bold uppercase tracking-wider mt-2 px-1.5 py-0.5 rounded-full ${prov.badgeColor}`}>
                     {prov.badge}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -105,19 +112,13 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
                 </label>
                 <input
                   type="password"
-                  placeholder={
-                    formData.provider === 'gemini' ? 'AIzaSy...' :
-                    formData.provider === 'groq' ? 'gsk_...' :
-                    formData.provider === 'deepseek' ? 'sk-...' :
-                    'sk-...'
-                  }
+                  placeholder={apiKeyPlaceholder}
                   value={formData.apiKey || ''}
                   onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
                   className="input-dark w-full"
                 />
                 <p className="text-[10px] text-slate-600 mt-1 flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-emerald-400 inline-block" />
-                  Stockée uniquement dans votre navigateur (localStorage).
+                  <span className="w-1 h-1 rounded-full bg-emerald-400 inline-block" /> Stockée uniquement dans votre navigateur (localStorage).
                 </p>
               </div>
             )}
