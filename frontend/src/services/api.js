@@ -1,4 +1,9 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('onrender.com'))
+    ? 'https://cv-maker-3r45.onrender.com/api'
+    : '/api')
+).replace(/\/$/, '');
 
 export async function fetchProfile() {
   const res = await fetch(`${API_BASE}/profile`);
