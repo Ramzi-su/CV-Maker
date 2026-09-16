@@ -1,7 +1,7 @@
 export const DEFAULT_PROFILE = {
   contact: {
     full_name: "Ramzi Moulahi",
-    title: "Ingénieur Logiciel Full-Stack & Intelligence Artificielle",
+    title: "Cybersecurity Software Engineer",
     email: "ramzimoulahi.x@gmail.com",
     phone: "+33 6 12 34 56 78",
     location: "Paris, France",
