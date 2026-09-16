@@ -107,6 +107,14 @@ export default function App() {
 
   const handleTailor = async () => {
     if (!profile || !jobText.trim()) return;
+    const isVercel = typeof window !== 'undefined' && (
+      window.location.hostname.includes('vercel.app') ||
+      (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    );
+    if (isVercel && aiSettings.provider === 'ollama') {
+      alert("Ollama n'est pas disponible sur Vercel. Vous pouvez installer le projet et configurer Ollama chez vous.");
+      return;
+    }
     setIsTailoring(true);
     try {
       const res = await tailorResume({

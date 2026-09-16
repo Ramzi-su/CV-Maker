@@ -1,5 +1,10 @@
 import React from 'react';
-import { X, Sparkles, Cpu, Key, Server, Check, Globe, ChevronDown } from 'lucide-react';
+import { X, Sparkles, Cpu, Key, Server, Check, Globe, ChevronDown, AlertCircle } from 'lucide-react';
+
+const isVercel = typeof window !== 'undefined' && (
+  window.location.hostname.includes('vercel.app') ||
+  (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+);
 
 const PROVIDERS = [
   { id: 'heuristic', name: 'Heuristique', desc: '100% Hors-ligne, instantané', badge: 'Recommandé', badgeColor: 'bg-emerald-500/15 text-emerald-400', needsKey: false, needsModel: false, needsUrl: false },
@@ -29,6 +34,10 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isVercel && formData.provider === 'ollama') {
+      alert("Ollama n'est pas disponible sur Vercel. Vous pouvez installer le projet et configurer Ollama chez vous.");
+      return;
+    }
     onSave(formData);
     onClose();
   };
@@ -84,8 +93,8 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
                     )}
                   </div>
                   <p className="text-[10px] text-slate-500 leading-snug">{prov.desc}</p>
-                  <span className={`inline-block text-[8px] font-bold uppercase tracking-wider mt-2 px-1.5 py-0.5 rounded-full ${prov.badgeColor}`}>
-                    {prov.badge}
+                  <span className={`inline-block text-[8px] font-bold uppercase tracking-wider mt-2 px-1.5 py-0.5 rounded-full ${isVercel && prov.id === 'ollama' ? 'bg-amber-500/15 text-amber-400' : prov.badgeColor}`}>
+                    {isVercel && prov.id === 'ollama' ? 'Local requis' : prov.badge}
                   </span>
                 </button>
               ))}
@@ -169,19 +178,33 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
             {/* Ollama URL */}
             {selectedProvider.needsUrl && (
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
-                  <Server className="w-3 h-3" /> URL du serveur Ollama
-                </label>
-                <input
-                  type="text"
-                  placeholder="http://localhost:11434"
-                  value={formData.ollamaUrl || 'http://localhost:11434'}
-                  onChange={(e) => setFormData({ ...formData, ollamaUrl: e.target.value })}
-                  className="input-dark w-full"
-                />
-                <p className="text-[10px] text-slate-600 mt-1">
-                  Assurez-vous qu'Ollama est démarré (<code className="bg-white/[0.06] px-1 py-0.5 rounded text-brand-400 font-mono">ollama serve</code>).
-                </p>
+                {isVercel ? (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold">Ollama n'est pas disponible sur Vercel</p>
+                      <p className="text-[11px] text-amber-200/80 mt-0.5">
+                        Vous pouvez installer le projet et configurer Ollama chez vous.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+                      <Server className="w-3 h-3" /> URL du serveur Ollama
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="http://localhost:11434"
+                      value={formData.ollamaUrl || 'http://localhost:11434'}
+                      onChange={(e) => setFormData({ ...formData, ollamaUrl: e.target.value })}
+                      className="input-dark w-full"
+                    />
+                    <p className="text-[10px] text-slate-600 mt-1">
+                      Assurez-vous qu'Ollama est démarré (<code className="bg-white/[0.06] px-1 py-0.5 rounded text-brand-400 font-mono">ollama serve</code>).
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>
