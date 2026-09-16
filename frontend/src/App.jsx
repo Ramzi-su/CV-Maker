@@ -32,7 +32,7 @@ const STEPS = [
 ];
 
 export default function App() {
-  const [activeStep, setActiveStep] = useState('job');
+  const [activeStep, setActiveStep] = useState('profile');
   const [profile, setProfile] = useState(() => {
     try {
       const saved = localStorage.getItem('cvmaker_profile');
