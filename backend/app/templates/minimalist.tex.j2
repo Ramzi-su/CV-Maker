@@ -1,0 +1,113 @@
+\documentclass[9.5pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+\definecolor{accent}{RGB}{15, 23, 42}
+\definecolor{subtext}{RGB}{71, 85, 105}
+
+\hypersetup{colorlinks=true, linkcolor=accent, urlcolor=accent}
+
+\titleformat{\section}
+  {\large\bfseries\color{accent}}
+  {}{0em}
+  {}[\vspace{-4pt}\rule{\textwidth}{0.5pt}]
+\titlespacing*{\section}{0pt}{8pt}{4pt}
+
+\setlist[itemize]{leftmargin=1em, itemsep=1pt, parsep=0pt, topsep=1pt}
+\pagestyle{empty}
+
+\begin{document}
+
+% EN-TÊTE COMPACT
+\begin{minipage}[t]{0.60\textwidth}
+    {\LARGE\bfseries\color{accent} \VAR{contact.full_name}} \\
+    \BLOCK{if contact.title}{\small\bfseries\color{subtext} \VAR{contact.title}}\BLOCK{endif}
+\end{minipage}
+\begin{minipage}[t]{0.39\textwidth}
+    \raggedleft\footnotesize\color{subtext}
+    \BLOCK{if contact.email}\VAR{contact.email} \\ \BLOCK{endif}
+    \BLOCK{if contact.phone}\VAR{contact.phone} \\ \BLOCK{endif}
+    \BLOCK{if contact.location}\VAR{contact.location} \\ \BLOCK{endif}
+    \BLOCK{if contact.linkedin}\href{https://\VAR{contact.linkedin}}{\VAR{contact.linkedin}} \BLOCK{endif}
+\end{minipage}
+\vspace{4pt}
+
+\BLOCK{if summary}
+\section*{Profil}
+{\small \VAR{summary}}
+\BLOCK{endif}
+
+\BLOCK{if experiences}
+\section*{Expériences}
+\BLOCK{for exp in experiences}
+\noindent
+\textbf{\small \VAR{exp.role}} -- \textit{\small \VAR{exp.company}} \hfill {\footnotesize\color{subtext} \VAR{exp.start_date} -- \VAR{exp.end_date}}
+\BLOCK{if exp.highlights}
+\begin{itemize}
+\BLOCK{for hl in exp.highlights}
+    \item {\small \VAR{hl}}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\BLOCK{if exp.technologies}
+\noindent{\footnotesize \textbf{Tech :} \VAR{exp.technologies|join(', ')}} \\
+\BLOCK{endif}
+\vspace{2pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if projects}
+\section*{Projets}
+\BLOCK{for proj in projects}
+\noindent
+\textbf{\small \VAR{proj.name}} \BLOCK{if proj.link} {\footnotesize (\href{\VAR{proj.link}}{lien})} \BLOCK{endif}
+\BLOCK{if proj.description} -- {\small \VAR{proj.description}} \BLOCK{endif}
+\BLOCK{if proj.highlights}
+\begin{itemize}
+\BLOCK{for hl in proj.highlights}
+    \item {\small \VAR{hl}}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\vspace{2pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if skill_categories}
+\section*{Compétences}
+\begin{itemize}
+\BLOCK{for cat in skill_categories}
+    \item {\small \textbf{\VAR{cat.category} :} \VAR{cat.skills|join(' $\\cdot$ ')}}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+
+\BLOCK{if education}
+\section*{Formation}
+\BLOCK{for edu in education}
+\noindent
+\textbf{\small \VAR{edu.degree}} -- \textit{\small \VAR{edu.institution}} \hfill {\footnotesize\color{subtext} \VAR{edu.year}}
+\BLOCK{if edu.details} \\ {\footnotesize \VAR{edu.details}} \BLOCK{endif}
+\vspace{2pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if languages or certifications}
+\section*{Divers}
+{\small
+\BLOCK{if languages}
+\textbf{Langues :} \BLOCK{for lang in languages}\VAR{lang.name} (\VAR{lang.level})\BLOCK{if not loop.last}, \BLOCK{endif}\BLOCK{endfor}
+\BLOCK{endif}
+\BLOCK{if certifications}
+\quad\textbf{Certifications :} \VAR{certifications|join(', ')}
+\BLOCK{endif}
+}
+\BLOCK{endif}
+
+\end{document}

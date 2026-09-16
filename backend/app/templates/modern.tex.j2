@@ -1,0 +1,148 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[left=0.7in,right=0.7in,top=0.6in,bottom=0.6in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+% Configuration des couleurs
+\definecolor{primary}{RGB}{30, 64, 175}   % Bleu profond élégant
+\definecolor{darkgray}{RGB}{55, 65, 81}
+\definecolor{lightgray}{RGB}{107, 114, 128}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    urlcolor=primary,
+}
+
+% Format des titres de section
+\titleformat{\section}
+  {\Large\bfseries\color{primary}}
+  {}{0em}
+  {}[\titlerule]
+\titlespacing*{\section}{0pt}{10pt}{6pt}
+
+\titleformat{\subsection}
+  {\large\bfseries\color{darkgray}}
+  {}{0em}
+  {}
+\titlespacing*{\subsection}{0pt}{6pt}{3pt}
+
+% Réduction des espacements dans les listes
+\setlist[itemize]{leftmargin=1.2em, itemsep=2pt, parsep=0pt, topsep=2pt}
+
+\pagestyle{empty}
+
+\begin{document}
+
+% EN-TÊTE
+\begin{center}
+    {\Huge\bfseries\color{primary} \VAR{contact.full_name}} \\
+    \vspace{4pt}
+    \BLOCK{if contact.title}
+    {\large\bfseries\color{darkgray} \VAR{contact.title}} \\
+    \vspace{3pt}
+    \BLOCK{endif}
+    {\small\color{lightgray}
+        \BLOCK{if contact.email}\href{mailto:\VAR{contact.email}}{\VAR{contact.email}}\BLOCK{endif}
+        \BLOCK{if contact.phone} $\bullet$ \VAR{contact.phone}\BLOCK{endif}
+        \BLOCK{if contact.location} $\bullet$ \VAR{contact.location}\BLOCK{endif}
+        \BLOCK{if contact.linkedin} $\bullet$ \href{https://\VAR{contact.linkedin}}{LinkedIn}\BLOCK{endif}
+        \BLOCK{if contact.github} $\bullet$ \href{https://\VAR{contact.github}}{GitHub}\BLOCK{endif}
+        \BLOCK{if contact.website} $\bullet$ \href{https://\VAR{contact.website}}{Site Web}\BLOCK{endif}
+    }
+\end{center}
+\vspace{2pt}
+
+% PROFIL / RÉSUMÉ
+\BLOCK{if summary}
+\section*{Profil Professionnel}
+\VAR{summary}
+\BLOCK{endif}
+
+% EXPÉRIENCES PROFESSIONNELLES
+\BLOCK{if experiences}
+\section*{Expériences Professionnelles}
+\BLOCK{for exp in experiences}
+\noindent
+\textbf{\large \VAR{exp.role}} \hfill \textit{\color{lightgray} \VAR{exp.start_date} -- \VAR{exp.end_date}} \\
+\textbf{\color{darkgray} \VAR{exp.company}} \BLOCK{if exp.location} \hfill \textit{\small \VAR{exp.location}} \BLOCK{endif}
+
+\BLOCK{if exp.highlights}
+\begin{itemize}
+\BLOCK{for hl in exp.highlights}
+    \item \VAR{hl}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\BLOCK{if exp.technologies}
+\vspace{1pt}
+\noindent{\small \textbf{Technologies :} \VAR{exp.technologies|join(', ')}}
+\BLOCK{endif}
+\vspace{6pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+% PROJETS CLÉS
+\BLOCK{if projects}
+\section*{Projets Réalisés}
+\BLOCK{for proj in projects}
+\noindent
+\textbf{\VAR{proj.name}} \BLOCK{if proj.link} \hfill \href{\VAR{proj.link}}{\small Voir le projet} \BLOCK{endif} \\
+\BLOCK{if proj.description}
+\textit{\small \VAR{proj.description}} \\
+\BLOCK{endif}
+\BLOCK{if proj.highlights}
+\begin{itemize}
+\BLOCK{for hl in proj.highlights}
+    \item \VAR{hl}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\BLOCK{if proj.technologies}
+\noindent{\small \textbf{Technologies :} \VAR{proj.technologies|join(', ')}}
+\BLOCK{endif}
+\vspace{5pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+% COMPÉTENCES TECHNIQUES
+\BLOCK{if skill_categories}
+\section*{Compétences}
+\begin{itemize}[leftmargin=1em]
+\BLOCK{for cat in skill_categories}
+    \item \textbf{\VAR{cat.category} :} \VAR{cat.skills|join(' $\\bullet$ ')}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+
+% FORMATIONS
+\BLOCK{if education}
+\section*{Formation}
+\BLOCK{for edu in education}
+\noindent
+\textbf{\VAR{edu.degree}} \hfill \textit{\color{lightgray} \VAR{edu.year}} \\
+\textit{\color{darkgray} \VAR{edu.institution}} \BLOCK{if edu.location} -- \VAR{edu.location} \BLOCK{endif}
+\BLOCK{if edu.details} \\ {\small \VAR{edu.details}} \BLOCK{endif}
+\vspace{4pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+% LANGUES ET CERTIFICATIONS
+\BLOCK{if languages or certifications}
+\section*{Langues \& Certifications}
+\begin{itemize}[leftmargin=1em]
+\BLOCK{if languages}
+    \item \textbf{Langues :} \BLOCK{for lang in languages}\VAR{lang.name} (\VAR{lang.level})\BLOCK{if not loop.last}, \BLOCK{endif}\BLOCK{endfor}
+\BLOCK{endif}
+\BLOCK{if certifications}
+    \item \textbf{Certifications :} \VAR{certifications|join(', ')}
+\BLOCK{endif}
+\end{itemize}
+\BLOCK{endif}
+
+\end{document}

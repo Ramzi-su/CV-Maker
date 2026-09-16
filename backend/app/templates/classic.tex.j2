@@ -1,0 +1,121 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+\hypersetup{
+    colorlinks=false,
+    pdfborder={0 0 0},
+}
+
+\titleformat{\section}
+  {\large\bfseries\scshape}
+  {}{0em}
+  {}[\titlerule]
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+
+\setlist[itemize]{leftmargin=1.5em, itemsep=2pt, parsep=0pt, topsep=2pt}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE\textbf{\scshape \VAR{contact.full_name}}} \\
+    \vspace{2pt}
+    \BLOCK{if contact.title}
+    {\large \VAR{contact.title}} \\
+    \vspace{2pt}
+    \BLOCK{endif}
+    {\small
+        \BLOCK{if contact.location}\VAR{contact.location} \;\textbar\; \BLOCK{endif}
+        \BLOCK{if contact.phone}\VAR{contact.phone} \;\textbar\; \BLOCK{endif}
+        \BLOCK{if contact.email}\VAR{contact.email} \BLOCK{endif}
+        \BLOCK{if contact.linkedin} \;\textbar\; \VAR{contact.linkedin} \BLOCK{endif}
+        \BLOCK{if contact.github} \;\textbar\; \VAR{contact.github} \BLOCK{endif}
+    }
+\end{center}
+
+\BLOCK{if summary}
+\section*{Profil}
+\VAR{summary}
+\BLOCK{endif}
+
+\BLOCK{if experiences}
+\section*{Expériences Professionnelles}
+\BLOCK{for exp in experiences}
+\noindent
+\textbf{\VAR{exp.role}}, \textit{\VAR{exp.company}} \hfill \textbf{\VAR{exp.start_date} -- \VAR{exp.end_date}} \\
+\BLOCK{if exp.location}\textit{\small \VAR{exp.location}} \\ \BLOCK{endif}
+\BLOCK{if exp.highlights}
+\begin{itemize}
+\BLOCK{for hl in exp.highlights}
+    \item \VAR{hl}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\BLOCK{if exp.technologies}
+\noindent{\small \textit{Technologies :} \VAR{exp.technologies|join(', ')}}
+\BLOCK{endif}
+\vspace{6pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if projects}
+\section*{Projets Significatifs}
+\BLOCK{for proj in projects}
+\noindent
+\textbf{\VAR{proj.name}} \BLOCK{if proj.link} (\VAR{proj.link}) \BLOCK{endif} \\
+\BLOCK{if proj.description}
+\textit{\small \VAR{proj.description}} \\
+\BLOCK{endif}
+\BLOCK{if proj.highlights}
+\begin{itemize}
+\BLOCK{for hl in proj.highlights}
+    \item \VAR{hl}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\BLOCK{if proj.technologies}
+\noindent{\small \textit{Stack :} \VAR{proj.technologies|join(', ')}}
+\BLOCK{endif}
+\vspace{4pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if skill_categories}
+\section*{Compétences Techniques}
+\begin{itemize}[leftmargin=1.2em]
+\BLOCK{for cat in skill_categories}
+    \item \textbf{\VAR{cat.category} :} \VAR{cat.skills|join(', ')}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+
+\BLOCK{if education}
+\section*{Formation Académique}
+\BLOCK{for edu in education}
+\noindent
+\textbf{\VAR{edu.degree}} \hfill \textbf{\VAR{edu.year}} \\
+\textit{\VAR{edu.institution}} \BLOCK{if edu.location} -- \VAR{edu.location} \BLOCK{endif}
+\BLOCK{if edu.details} \\ {\small \VAR{edu.details}} \BLOCK{endif}
+\vspace{4pt}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if languages or certifications}
+\section*{Autres Informations}
+\begin{itemize}[leftmargin=1.2em]
+\BLOCK{if languages}
+    \item \textbf{Langues :} \BLOCK{for lang in languages}\VAR{lang.name} (\VAR{lang.level})\BLOCK{if not loop.last}, \BLOCK{endif}\BLOCK{endfor}
+\BLOCK{endif}
+\BLOCK{if certifications}
+    \item \textbf{Certifications :} \VAR{certifications|join(', ')}
+\BLOCK{endif}
+\end{itemize}
+\BLOCK{endif}
+
+\end{document}
