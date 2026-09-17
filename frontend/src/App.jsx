@@ -120,22 +120,22 @@ export default function App() {
 
   const handleImport = (importedData) => {
     if (!importedData) return;
-    
-    // Replace the profile entirely with the imported data to avoid keeping example data
-    const newProfile = {
-      contact: importedData.contact || {
-        full_name: '', title: '', email: '', phone: '', location: '', linkedin: '', github: '', website: ''
-      },
-      summary: importedData.summary || '',
-      experiences: importedData.experiences || [],
-      education: importedData.education || [],
-      projects: importedData.projects || [],
-      skill_categories: importedData.skill_categories || [],
-      languages: importedData.languages || [],
-      certifications: importedData.certifications || [],
+    const merged = {
+      contact: { ...profile?.contact, ...importedData.contact },
+      summary: importedData.summary || profile?.summary || '',
+      experiences: importedData.experiences?.length ? importedData.experiences : (profile?.experiences || []),
+      education: importedData.education?.length ? importedData.education : (profile?.education || []),
+      projects: importedData.projects?.length ? importedData.projects : (profile?.projects || []),
+      skill_categories: importedData.skill_categories?.length ? importedData.skill_categories : (profile?.skill_categories || []),
+      languages: importedData.languages?.length ? importedData.languages : (profile?.languages || []),
+      certifications: importedData.certifications?.length ? importedData.certifications : (profile?.certifications || []),
     };
-    
-    setProfile(newProfile);
+    for (const key of Object.keys(merged.contact)) {
+      if (!merged.contact[key] && profile?.contact?.[key]) {
+        merged.contact[key] = profile.contact[key];
+      }
+    }
+    setProfile(merged);
     setActiveStep('profile');
   };
 
