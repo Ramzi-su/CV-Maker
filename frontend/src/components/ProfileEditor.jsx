@@ -221,10 +221,6 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
                       <input type="text" value={exp.end_date} onChange={(e) => updateExperience(idx, 'end_date', e.target.value)} placeholder="Fin" className="input-dark w-1/2 text-xs" />
                     </div>
                   </div>
-                  <div>
-                    <label htmlFor={`exp-location-${exp.id || idx}`} className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lieu</label>
-                    <input id={`exp-location-${exp.id || idx}`} type="text" value={exp.location || ''} onChange={(e) => updateExperience(idx, 'location', e.target.value)} className="input-dark w-full mt-1" />
-                  </div>
                 </div>
 
                 <div>
