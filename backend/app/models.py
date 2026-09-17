@@ -103,6 +103,15 @@ class ExtractLatexRequest(BaseModel):
     ollama_url: Optional[str] = "http://localhost:11434"
 
 
+class InjectLatexRequest(BaseModel):
+    latex_template: str
+    cv_data: dict
+    provider: str = Field(default="heuristic", description="gemini | openai | ollama | heuristic")
+    api_key: Optional[str] = None
+    model_name: Optional[str] = None
+    ollama_url: Optional[str] = "http://localhost:11434"
+
+
 class GenerateRequest(BaseModel):
     profile: Optional[Profile] = None
     tailored_cv: Optional[TailoredCV] = None

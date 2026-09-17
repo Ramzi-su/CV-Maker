@@ -145,3 +145,20 @@ Renvoie UNIQUEMENT un objet JSON valide conforme à la structure suivante :
   "certifications": ["Certification 1", "Certification 2"]
 }
 """
+
+LATEX_INJECTION_PROMPT = """Tu es un expert en LaTeX et un coach carrière.
+Ta mission est d'injecter les informations du profil JSON fourni dans le code source LaTeX fourni.
+
+RÈGLES D'INJECTION (TRÈS IMPORTANTES) :
+1. NE MODIFIE AUCUNE COMMANDE DE STRUCTURE (\section, \cventry, \begin{itemize}, etc.).
+2. Conserve le design exact et le nommage des macros d'origine.
+3. Remplace le contenu textuel (nom, expériences, compétences, résumé) par les données du JSON.
+4. Si une expérience ou compétence du JSON n'a pas sa place (manque de blocs dans le template), ajoute-la uniquement si tu peux dupliquer un bloc existant avec la même syntaxe LaTeX.
+5. Renvoie UNIQUEMENT le code source LaTeX complet et valide. N'ajoute AUCUN texte autour, ni de balises Markdown (ex: pas de ```latex).
+
+Code LaTeX d'origine :
+{latex_template}
+
+Profil JSON (données à injecter) :
+{cv_data}
+"""

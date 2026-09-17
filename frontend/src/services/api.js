@@ -141,3 +141,24 @@ export async function extractFromPdf(file, aiSettings = {}) {
   }
   return res.json();
 }
+
+export async function injectLatexWithAI(latexTemplate, cvData, aiSettings = {}) {
+  const payload = {
+    latex_template: latexTemplate,
+    cv_data: cvData,
+    provider: aiSettings.provider || 'heuristic',
+    api_key: aiSettings.apiKey || '',
+    model_name: aiSettings.modelName || '',
+    ollama_url: aiSettings.ollamaUrl || 'http://localhost:11434',
+  };
+  const res = await fetch(`${API_BASE}/inject-latex-ai`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Erreur lors de l'injection IA dans le LaTeX");
+  }
+  return res.json();
+}

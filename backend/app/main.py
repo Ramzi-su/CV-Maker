@@ -17,6 +17,7 @@ from .models import (
     GenerateRequest,
     JobOffer,
     ExtractLatexRequest,
+    InjectLatexRequest,
 )
 from .latex.renderer import render_latex
 from .latex.compiler import compile_latex_to_pdf
@@ -261,3 +262,27 @@ async def extract_from_pdf(
         except Exception:
             pass
 
+@app.post("/api/inject-latex-ai")
+def inject_latex_ai_route(payload: InjectLatexRequest):
+    if not payload.latex_template.strip():
+        raise HTTPException(status_code=400, detail="Le code LaTeX ne peut pas être vide.")
+    if not payload.cv_data:
+        raise HTTPException(status_code=400, detail="Les données du profil (cv_data) sont manquantes.")
+    
+    if payload.provider.lower() == "heuristic":
+        raise HTTPException(status_code=400, detail="Le provider heuristique ne supporte pas l'injection de LaTeX personnalisé. Veuillez sélectionner une IA.")
+
+    from .ai.latex_injector import inject_profile_into_latex
+    
+    try:
+        new_latex = inject_profile_into_latex(
+            latex_template=payload.latex_template,
+            cv_data=payload.cv_data,
+            provider=payload.provider,
+            api_key=payload.api_key,
+            model_name=payload.model_name,
+            ollama_url=payload.ollama_url
+        )
+        return {"latex_code": new_latex}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'injection IA dans le LaTeX: {str(e)}")

@@ -420,6 +420,7 @@ export default function App() {
                 templates={templates}
                 selectedTemplate={selectedTemplate}
                 setSelectedTemplate={setSelectedTemplate}
+                aiSettings={aiSettings}
               />
             </div>
           )}

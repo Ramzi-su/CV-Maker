@@ -8,16 +8,18 @@ import {
   Code2,
   Loader2,
 } from 'lucide-react';
-import { compilePdf, renderLatex } from '../services/api';
+import { compilePdf, renderLatex, injectLatexWithAI } from '../services/api';
 
 export default function ResumePreview({
   cvData,
   templates,
   selectedTemplate,
   setSelectedTemplate,
+  aiSettings,
 }) {
   const [viewMode, setViewMode] = useState('pdf');
   const [latexCode, setLatexCode] = useState('');
+  const [baseLatex, setBaseLatex] = useState('');
   const [pdfUrl, setPdfUrl] = useState(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [compileError, setCompileError] = useState('');
@@ -27,10 +29,23 @@ export default function ResumePreview({
     setIsCompiling(true);
     setCompileError('');
     try {
-      const res = await compilePdf(selectedTemplate, cvData, codeToCompile || (viewMode === 'latex' ? latexCode : null));
+      let finalLatex = codeToCompile || (viewMode === 'latex' ? latexCode : null);
+
+      if (selectedTemplate === 'custom_ai' && baseLatex.trim()) {
+        const injected = await injectLatexWithAI(baseLatex, cvData, aiSettings);
+        finalLatex = injected.latex_code;
+        setLatexCode(finalLatex);
+        setViewMode('latex'); // Switch to latex mode to show the result
+      }
+
+      const res = await compilePdf(
+        selectedTemplate === 'custom_ai' ? 'modern' : selectedTemplate, // Fallback dummy template name for compilation
+        cvData,
+        finalLatex
+      );
       setPdfUrl(res.download_url);
       setLastCompiledName(res.filename);
-      if (res.latex_code) setLatexCode(res.latex_code);
+      if (res.latex_code && selectedTemplate !== 'custom_ai') setLatexCode(res.latex_code);
     } catch (err) {
       setCompileError(err.message || 'Erreur lors de la compilation du PDF.');
     } finally {
@@ -50,6 +65,14 @@ export default function ResumePreview({
 
   const handleTemplateChange = async (tplId) => {
     setSelectedTemplate(tplId);
+    if (tplId === 'custom_ai') {
+      setViewMode('latex');
+      if (!baseLatex) {
+         setBaseLatex('% Collez votre code LaTeX personnalisé ici...\n\\documentclass{article}\n\\begin{document}\n\n\\end{document}');
+      }
+      return;
+    }
+
     if (viewMode === 'latex') {
       try {
         const res = await renderLatex(tplId, cvData);
@@ -59,6 +82,8 @@ export default function ResumePreview({
       }
     }
   };
+
+  const allTemplates = [...templates, { id: 'custom_ai', name: 'Personnalisé (IA)', description: 'Utilise l\'IA pour injecter vos données dans votre propre LaTeX' }];
 
   const pdfContent = pdfUrl ? (
     <div className="flex-1 w-full border border-white/[0.06] rounded-2xl overflow-hidden shadow-dark-elevation bg-surface-100 flex flex-col min-h-[550px]">
@@ -94,7 +119,7 @@ export default function ResumePreview({
             <Layers className="w-4 h-4 text-slate-400" />
           </div>
           <div className="flex bg-white/[0.04] p-1 rounded-xl gap-0.5 border border-white/[0.04]">
-            {templates.map((tpl) => (
+            {allTemplates.map((tpl) => (
               <button
                 key={tpl.id}
                 onClick={() => handleTemplateChange(tpl.id)}
@@ -138,7 +163,7 @@ export default function ResumePreview({
             className="btn-primary flex items-center gap-1.5 px-4 py-2 text-xs"
           >
             {isCompiling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-            {isCompiling ? 'Compilation…' : 'Compiler'}
+            {isCompiling ? 'Génération…' : (selectedTemplate === 'custom_ai' ? 'Injecter & Compiler' : 'Compiler')}
           </button>
 
           {pdfUrl && (
@@ -168,6 +193,33 @@ export default function ResumePreview({
       <div className="flex-1 p-4 sm:p-6 flex flex-col">
         {viewMode === 'pdf' ? (
           pdfContent
+        ) : selectedTemplate === 'custom_ai' ? (
+          <div className="flex-1 flex gap-4 h-full">
+            <div className="flex-1 flex flex-col space-y-2">
+              <div className="text-xs text-slate-500 font-medium">1. Collez votre template LaTeX brut ici :</div>
+              <textarea
+                value={baseLatex}
+                onChange={(e) => setBaseLatex(e.target.value)}
+                className="flex-1 w-full min-h-[500px] font-mono text-[11px] code-editor rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-brand-500/30 leading-relaxed"
+                spellCheck={false}
+              />
+            </div>
+            <div className="flex-1 flex flex-col space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>2. Résultat généré par l'IA :</span>
+                <button onClick={() => handleCompile(latexCode)} disabled={isCompiling || !latexCode} className="text-[11px] font-bold text-accent-emerald hover:text-emerald-300 transition-smooth">
+                  Recompiler ce code direct
+                </button>
+              </div>
+              <textarea
+                value={latexCode}
+                onChange={(e) => setLatexCode(e.target.value)}
+                className="flex-1 w-full min-h-[500px] font-mono text-[11px] code-editor rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-purple-500/30 leading-relaxed"
+                spellCheck={false}
+                placeholder="Le code LaTeX avec vos données injectées apparaîtra ici..."
+              />
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-500">
