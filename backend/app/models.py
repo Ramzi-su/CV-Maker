@@ -37,6 +37,8 @@ class Project(BaseModel):
     id: Optional[str] = None
     name: str = Field(..., description="Nom du projet")
     description: str = Field(default="", description="Brève description")
+    year: Optional[str] = Field(default="", description="Année ou période du projet")
+    company: Optional[str] = Field(default="", description="Société ou organisation associée")
     highlights: List[str] = Field(default_factory=list, description="Fonctionnalités ou résultats")
     technologies: List[str] = Field(default_factory=list, description="Technologies")
     link: Optional[str] = Field(default="", description="Lien (URL)")

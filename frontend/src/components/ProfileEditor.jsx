@@ -321,6 +321,8 @@ export default function ProfileEditor({ profile, onChange, onSave, onReset, onOp
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <InputField label="Nom du Projet" value={proj.name} onChange={(e) => { const u = [...profile.projects]; u[idx] = { ...u[idx], name: e.target.value }; onChange({ ...profile, projects: u }); }} />
                   <InputField label="Lien" value={proj.link || ''} onChange={(e) => { const u = [...profile.projects]; u[idx] = { ...u[idx], link: e.target.value }; onChange({ ...profile, projects: u }); }} placeholder="https://..." />
+                  <InputField label="Période" value={proj.year || ''} onChange={(e) => { const u = [...profile.projects]; u[idx] = { ...u[idx], year: e.target.value }; onChange({ ...profile, projects: u }); }} />
+                  <InputField label="Société / Organisation" value={proj.company || ''} onChange={(e) => { const u = [...profile.projects]; u[idx] = { ...u[idx], company: e.target.value }; onChange({ ...profile, projects: u }); }} />
                 </div>
                 <div className="mt-3">
                   <label htmlFor={`proj-desc-${proj.id || idx}`} className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Description</label>

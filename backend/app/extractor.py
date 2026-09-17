@@ -420,13 +420,21 @@ def parse_pdf_text_to_profile(text: str) -> Dict[str, Any]:
     if email_m:
         result["contact"]["email"] = email_m.group(0)
 
-    # Phone
-    phone_m = re.search(r'(?:\+\d{1,3}[\s\-]?)?(?:\(?\d{1,4}\)?[\s\-]?)?[\d\s\-]{7,15}', text)
-    if phone_m:
-        candidate = phone_m.group(0).strip()
-        digits_only = re.sub(r'\D', '', candidate)
-        if 7 <= len(digits_only) <= 15:
-            result["contact"]["phone"] = candidate
+    # Phone (Search only in first 10 lines to avoid matching dates)
+    phone_text = '\n'.join(lines[:10])
+    phone_patterns = [
+        r'\+\d{1,4}(?:[\s\-\.]?\d{1,4})+',
+        r'\(?\d{2,4}\)?[\s\-\.]?\d{3,4}[\s\-\.]?\d{3,4}',
+        r'(?:\+\d{1,3}[\s\-]?)?(?:\(?\d{1,4}\)?[\s\-]?)?[\d\s\-]{7,15}'
+    ]
+    for pat in phone_patterns:
+        phone_m = re.search(pat, phone_text)
+        if phone_m:
+            candidate = phone_m.group(0).strip()
+            digits_only = re.sub(r'\D', '', candidate)
+            if 8 <= len(digits_only) <= 15:
+                result["contact"]["phone"] = candidate
+                break
 
     # LinkedIn
     li_m = re.search(r'linkedin\.com/in/[^\s,]+', text, re.IGNORECASE)
@@ -486,6 +494,10 @@ def parse_pdf_text_to_profile(text: str) -> Dict[str, Any]:
             and not re.match(r'^.+:\s+\S+.*\S', line)
             and '|' not in line
             and not re.search(r'\([^)]{3,}\)', line)
+            # Avoid matching lines that contain typical date patterns (e.g., May 2025)
+            and not re.search(r'\b(?:19|20)\d{2}\b', line)
+            # Avoid matching lines with em-dash/en-dash often used in project/experience titles
+            and not re.search(r'\s+[–—]\s+', line)
         )
         if not is_likely_header:
             continue
@@ -853,8 +865,23 @@ def _parse_pdf_projects(sec_lines: List[str]) -> List[Dict]:
         name = re.sub(_DATE_RANGE_PATTERN, '', name, flags=re.IGNORECASE).strip()
         name = name.strip('|–—- ,')
 
-        # Description from remaining header lines
-        description = ' '.join(header_lines[1:]).strip() if len(header_lines) > 1 else ""
+        start_date, end_date, _, _ = _extract_date_range(block_text)
+        year = ""
+        if start_date and end_date:
+            year = f"{start_date} - {end_date}"
+        elif start_date:
+            year = start_date
+
+        company = ""
+        description = ""
+        if len(header_lines) > 1:
+            second_line = header_lines[1].strip()
+            # If the second line is short and doesn't look like a URL, it might be the company/organization
+            if len(second_line) < 50 and not re.search(r'https?://', second_line):
+                company = second_line
+                description = ' '.join(header_lines[2:]).strip() if len(header_lines) > 2 else ""
+            else:
+                description = ' '.join(header_lines[1:]).strip()
 
         # Link
         link_m = re.search(r'(https?://[^\s,)]+)', block_text)
@@ -863,11 +890,13 @@ def _parse_pdf_projects(sec_lines: List[str]) -> List[Dict]:
         highlights = _extract_bullets(bullet_lines)
         technologies = _extract_technologies_from_text(block_text)
 
-        if name and len(name) > 2:
+        if name:
             projects.append({
                 "id": f"proj-import-{len(projects)}",
                 "name": name,
                 "description": description,
+                "year": year,
+                "company": company,
                 "highlights": highlights,
                 "technologies": technologies,
                 "link": link,
