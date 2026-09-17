@@ -31,21 +31,39 @@ def parse_latex_cv(latex_code: str) -> Dict[str, Any]:
     cleaned = re.sub(r'(?<!\\)%.*', '', latex_code)
 
     # --- Contact Information ---
-    # Name: look for \Huge, \LARGE, or the first bold text near the top
-    name_patterns = [
-        r'\\(?:Huge|LARGE|Large)\s*(?:\\(?:textbf|bfseries)\s*)?(?:\\(?:scshape|textsc)\s*)?[{]?\s*([^}\\]+?)\s*[}]?\\',
-        r'\\(?:textbf|bfseries)\s*\{\\(?:Huge|LARGE|Large)\s+([^}]+)\}',
-        r'\\name\s*\{([^}]+)\}',
-        r'\\cvname\s*\{([^}]+)\}',
-    ]
-    for pat in name_patterns:
-        m = re.search(pat, cleaned)
-        if m:
-            name = m.group(1).strip()
-            name = re.sub(r'\\[a-zA-Z]+\{?', '', name).strip().rstrip('}')
-            if len(name) > 2:
-                result["contact"]["full_name"] = name
-                break
+    # Name: try \firstname{}/\lastname{} or \name{first}{last} (moderncv) first
+    firstname_m = re.search(r'\\firstname\s*\{([^}]+)\}', cleaned)
+    lastname_m = re.search(r'\\lastname\s*\{([^}]+)\}', cleaned)
+    name_two_arg = re.search(r'\\name\s*\{([^}]+)\}\s*\{([^}]+)\}', cleaned)
+
+    if firstname_m and lastname_m:
+        fn = _clean_latex(firstname_m.group(1)).strip()
+        ln = _clean_latex(lastname_m.group(1)).strip()
+        result["contact"]["full_name"] = f"{fn} {ln}"
+    elif name_two_arg:
+        fn = _clean_latex(name_two_arg.group(1)).strip()
+        ln = _clean_latex(name_two_arg.group(2)).strip()
+        result["contact"]["full_name"] = f"{fn} {ln}"
+    else:
+        # Single-argument patterns and header patterns
+        name_patterns = [
+            r'\\name\s*\{([^}]+)\}',
+            r'\\cvname\s*\{([^}]+)\}',
+            r'\\author\s*\{([^}]+)\}',
+            r'\\(?:Huge|LARGE|Large)\s*(?:\\(?:textbf|bfseries)\s*)?(?:\\(?:scshape|textsc)\s*)?[{]?\s*([^}\\]+?)\s*[}]?\\',
+            r'\\(?:textbf|bfseries)\s*\{\\(?:Huge|LARGE|Large)\s+([^}]+)\}',
+            r'\\(?:Huge|LARGE)\s*\{([^}]+)\}',
+            r'\\centerline\s*\{\s*\\(?:Huge|LARGE|Large|huge)\s+([^}]+)\}',
+        ]
+        for pat in name_patterns:
+            m = re.search(pat, cleaned)
+            if m:
+                name = m.group(1).strip()
+                name = re.sub(r'\\[a-zA-Z]+\{?', '', name).strip().rstrip('}')
+                name = re.sub(r'[{}]', '', name).strip()
+                if len(name) > 2:
+                    result["contact"]["full_name"] = name
+                    break
 
     # Email
     email_patterns = [
@@ -85,6 +103,42 @@ def parse_latex_cv(latex_code: str) -> Dict[str, Any]:
         if loc_m:
             result["contact"]["location"] = loc_m.group(0).strip().rstrip(',').strip()
             break
+
+    # --- Professional Title ---
+    title_patterns = [
+        r'\\cvtitle\s*\{([^}]+)\}',
+        r'\\title\s*\{([^}]+)\}',
+        r'\\position\s*\{([^}]+)\}',
+        r'\\subtitle\s*\{([^}]+)\}',
+        r'\\jobtitle\s*\{([^}]+)\}',
+        r'\\headline\s*\{([^}]+)\}',
+    ]
+    for pat in title_patterns:
+        t_m = re.search(pat, cleaned)
+        if t_m:
+            title_candidate = _clean_latex(t_m.group(1)).strip()
+            if len(title_candidate) > 3:
+                result["contact"]["title"] = title_candidate
+                break
+
+    # Fallback title: line right after name in large font sizing
+    if not result["contact"]["title"] and result["contact"]["full_name"]:
+        name_val = result["contact"]["full_name"]
+        # Find the name occurrence in cleaned text, then look at the next line
+        name_esc = re.escape(name_val)
+        after_name_m = re.search(name_esc + r'[^\n]*\n\s*(.+)', cleaned)
+        if after_name_m:
+            candidate_line = after_name_m.group(1).strip()
+            candidate_clean = _clean_latex(candidate_line).strip()
+            # Must look like a title: no @, no url, short, no pure digits
+            if (candidate_clean
+                and len(candidate_clean) > 3
+                and len(candidate_clean) < 80
+                and '@' not in candidate_clean
+                and not re.search(r'https?://', candidate_clean)
+                and not re.match(r'^[\d\s+\-()/.]+$', candidate_clean)
+                and not re.search(r'linkedin|github', candidate_clean, re.IGNORECASE)):
+                result["contact"]["title"] = candidate_clean
 
     # --- Sections extraction ---
     # Find all \section or \section* blocks
@@ -230,6 +284,98 @@ def _extract_experiences(content: str) -> List[Dict]:
 
 def _extract_education(content: str) -> List[Dict]:
     education = []
+
+    # --- Strategy 1: \cventry (moderncv) ---
+    # \cventry{year}{degree}{institution}{location}{grade}{description}
+    cventry_pattern = r'\\cventry\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*(?:\{([^}]*)\})?\s*(?:\{([^}]*)\})?\s*(?:\{([^}]*)\})?'
+    for m in re.finditer(cventry_pattern, content):
+        year = _clean_latex(m.group(1)).strip()
+        degree = _clean_latex(m.group(2)).strip()
+        institution = _clean_latex(m.group(3)).strip()
+        location = _clean_latex(m.group(4) or "").strip()
+        grade = _clean_latex(m.group(5) or "").strip()
+        desc = _clean_latex(m.group(6) or "").strip()
+        details = f"{grade} {desc}".strip() if grade or desc else ""
+        if degree or institution:
+            education.append({
+                "id": f"edu-import-{len(education)}",
+                "degree": degree,
+                "institution": institution,
+                "location": location,
+                "year": year,
+                "details": details,
+            })
+    if education:
+        return education
+
+    # --- Strategy 2: \resumeSubheading (Jake's resume template) ---
+    # \resumeSubheading{institution}{location}{degree}{dates}
+    resume_sub_pattern = r'\\resumeSubheading\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}'
+    for m in re.finditer(resume_sub_pattern, content):
+        institution = _clean_latex(m.group(1)).strip()
+        location = _clean_latex(m.group(2)).strip()
+        degree = _clean_latex(m.group(3)).strip()
+        year = _clean_latex(m.group(4)).strip()
+        if degree or institution:
+            education.append({
+                "id": f"edu-import-{len(education)}",
+                "degree": degree,
+                "institution": institution,
+                "location": location,
+                "year": year,
+                "details": "",
+            })
+    if education:
+        return education
+
+    # --- Strategy 3: \entry or \rEntry (custom templates) ---
+    entry_pattern = r'\\(?:entry|rEntry)\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*(?:\{([^}]*)\})?'
+    for m in re.finditer(entry_pattern, content):
+        arg1 = _clean_latex(m.group(1)).strip()
+        arg2 = _clean_latex(m.group(2)).strip()
+        arg3 = _clean_latex(m.group(3)).strip()
+        arg4 = _clean_latex(m.group(4) or "").strip()
+        # Heuristic: if arg1 looks like a date, use arg2 as degree
+        if re.search(r'\d{4}', arg1):
+            year, degree, institution = arg1, arg2, arg3
+        else:
+            degree, institution, year = arg1, arg2, arg3
+        if degree or institution:
+            education.append({
+                "id": f"edu-import-{len(education)}",
+                "degree": degree,
+                "institution": institution,
+                "location": "",
+                "year": year,
+                "details": arg4,
+            })
+    if education:
+        return education
+
+    # --- Strategy 4: Tabular-based entries ---
+    # Pattern: date & \textbf{degree} ... institution in italic or second column
+    tabular_pattern = r'([^&\n]*\d{4}[^&]*)\s*&\s*(.*?)(?:\\\\|$)'
+    for m in re.finditer(tabular_pattern, content, re.DOTALL):
+        date_col = _clean_latex(m.group(1)).strip()
+        desc_col = m.group(2).strip()
+        bold_m = re.search(r'\\textbf\{([^}]+)\}', desc_col)
+        italic_m = re.search(r'\\textit\{([^}]+)\}', desc_col)
+        degree = _clean_latex(bold_m.group(1)).strip() if bold_m else _clean_latex(desc_col).strip()
+        institution = _clean_latex(italic_m.group(1)).strip() if italic_m else ""
+        # Avoid adding entries where degree is just a year or empty
+        if degree and not re.match(r'^\d{4}\s*$', degree):
+            education.append({
+                "id": f"edu-import-{len(education)}",
+                "degree": degree,
+                "institution": institution,
+                "location": "",
+                "year": date_col,
+                "details": "",
+            })
+    if education:
+        return education
+
+    # --- Strategy 5: Generic \textbf blocks (original fallback) ---
     blocks = re.split(r'(?=\\(?:textbf|noindent)\s*\{)', content)
 
     for block in blocks:
@@ -242,8 +388,22 @@ def _extract_education(content: str) -> List[Dict]:
             continue
 
         degree = _clean_latex(bold_match.group(1)).strip()
+        # Try multiple patterns for institution
         italic_match = re.search(r'\\textit\{([^}]+)\}', block)
         institution = _clean_latex(italic_match.group(1)).strip() if italic_match else ""
+
+        # If no italic match, try second bold or text after comma/dash
+        if not institution:
+            all_bolds = re.findall(r'\\textbf\{([^}]+)\}', block)
+            if len(all_bolds) > 1:
+                institution = _clean_latex(all_bolds[1]).strip()
+            else:
+                after_bold = block[bold_match.end():]
+                after_clean = _clean_latex(after_bold).strip()
+                # Try to split by comma or dash
+                parts = re.split(r'\s*[,–—|]\s*', after_clean, maxsplit=1)
+                if parts and parts[0].strip() and not re.match(r'^\d{4}', parts[0].strip()):
+                    institution = parts[0].strip()
 
         year_match = re.search(r'(\d{4})\s*(?:--?|–)?\s*(\d{4})?', block)
         year = ""
