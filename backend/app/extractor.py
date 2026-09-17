@@ -31,12 +31,12 @@ def parse_latex_cv(latex_code: str) -> Dict[str, Any]:
     cleaned = re.sub(r'(?<!\\)%.*', '', latex_code)
 
     # --- Contact Information ---
-    # Name: look for \Huge, \LARGE, \name, \author, or the first bold text near the top
+    # Name: look for \Huge, \LARGE, or the first bold text near the top
     name_patterns = [
-        r'\\(?:name|cvname|author)\s*\{([^}]+)\}',
-        r'\\(?:Huge|LARGE)\s*\{([^}]+)\}',
-        r'\\textbf\{\\(?:Huge|LARGE|Large)\s*([^}]+)\}',
         r'\\(?:Huge|LARGE|Large)\s*(?:\\(?:textbf|bfseries)\s*)?(?:\\(?:scshape|textsc)\s*)?[{]?\s*([^}\\]+?)\s*[}]?\\',
+        r'\\(?:textbf|bfseries)\s*\{\\(?:Huge|LARGE|Large)\s+([^}]+)\}',
+        r'\\name\s*\{([^}]+)\}',
+        r'\\cvname\s*\{([^}]+)\}',
     ]
     for pat in name_patterns:
         m = re.search(pat, cleaned)
@@ -46,21 +46,6 @@ def parse_latex_cv(latex_code: str) -> Dict[str, Any]:
             if len(name) > 2:
                 result["contact"]["full_name"] = name
                 break
-
-    # Title extraction
-    title_patterns = [
-        r'\\cvtitle\s*\{([^}]+)\}',
-        r'\\position\s*\{([^}]+)\}',
-        r'\\cvjobtitle\s*\{([^}]+)\}',
-        r'\\jobtitle\s*\{([^}]+)\}',
-    ]
-    for pat in title_patterns:
-        m = re.search(pat, cleaned)
-        if m:
-            title = m.group(1).strip()
-            title = re.sub(r'\\[a-zA-Z]+\{?', '', title).strip().rstrip('}')
-            result["contact"]["title"] = title
-            break
 
     # Email
     email_patterns = [
@@ -245,48 +230,28 @@ def _extract_experiences(content: str) -> List[Dict]:
 
 def _extract_education(content: str) -> List[Dict]:
     education = []
-    blocks = re.split(r'(?=\\(?:textbf|noindent|cventry|cvevent)\s*\{)', content)
+    blocks = re.split(r'(?=\\(?:textbf|noindent)\s*\{)', content)
 
     for block in blocks:
         block = block.strip()
         if not block:
             continue
 
-        degree = ""
-        institution = ""
+        bold_match = re.search(r'\\textbf\{([^}]+)\}', block)
+        if not bold_match:
+            continue
+
+        degree = _clean_latex(bold_match.group(1)).strip()
+        italic_match = re.search(r'\\textit\{([^}]+)\}', block)
+        institution = _clean_latex(italic_match.group(1)).strip() if italic_match else ""
+
+        year_match = re.search(r'(\d{4})\s*(?:--?|–)?\s*(\d{4})?', block)
         year = ""
-        details = ""
+        if year_match:
+            year = year_match.group(0).strip()
 
-        cventry_match = re.search(r'\\cventry\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}', block)
-        cvevent_match = re.search(r'\\cvevent\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}', block)
-
-        if cventry_match:
-            year, degree, institution, city, grade, desc = cventry_match.groups()
-            degree = _clean_latex(degree).strip()
-            institution = _clean_latex(institution).strip()
-            details = _clean_latex(desc).strip()
-        elif cvevent_match:
-            degree, institution, year, location = cvevent_match.groups()
-            degree = _clean_latex(degree).strip()
-            institution = _clean_latex(institution).strip()
-            
-            details_items = re.findall(r'\\item\s+(.*?)(?=\\item|\\end|$)', block, re.DOTALL)
-            details = _clean_latex(' '.join(details_items)).strip() if details_items else ""
-        else:
-            bold_match = re.search(r'\\textbf\{([^}]+)\}', block)
-            if not bold_match:
-                continue
-
-            degree = _clean_latex(bold_match.group(1)).strip()
-            italic_match = re.search(r'\\textit\{([^}]+)\}', block)
-            institution = _clean_latex(italic_match.group(1)).strip() if italic_match else ""
-
-            year_match = re.search(r'(\d{4})\s*(?:--?|–)?\s*(\d{4})?', block)
-            if year_match:
-                year = year_match.group(0).strip()
-
-            details_items = re.findall(r'\\item\s+(.*?)(?=\\item|\\end|$)', block, re.DOTALL)
-            details = _clean_latex(' '.join(details_items)).strip() if details_items else ""
+        details_items = re.findall(r'\\item\s+(.*?)(?=\\item|\\end|$)', block, re.DOTALL)
+        details = _clean_latex(' '.join(details_items)).strip() if details_items else ""
 
         if degree:
             education.append({
@@ -333,54 +298,24 @@ def _extract_skills(content: str) -> List[Dict]:
 
 def _extract_projects(content: str) -> List[Dict]:
     projects = []
-    blocks = re.split(r'(?=\\(?:textbf|noindent|cventry|cvevent)\s*\{)', content)
+    blocks = re.split(r'(?=\\(?:textbf|noindent)\s*\{)', content)
 
     for block in blocks:
         block = block.strip()
         if not block:
             continue
 
-        name = ""
-        description = ""
-        link = ""
+        bold_match = re.search(r'\\textbf\{([^}]+)\}', block)
+        if not bold_match:
+            continue
 
-        cventry_match = re.search(r'\\cventry\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}', block)
-        cvevent_match = re.search(r'\\cvevent\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}', block)
+        name = _clean_latex(bold_match.group(1)).strip()
 
-        if cventry_match:
-            _, name, _, _, _, desc = cventry_match.groups()
-            name = _clean_latex(name).strip()
-            description = _clean_latex(desc).strip()
-        elif cvevent_match:
-            name, _, _, _ = cvevent_match.groups()
-            name = _clean_latex(name).strip()
-        else:
-            bold_match = re.search(r'\\textbf\{([^}]+)\}', block)
-            if not bold_match:
-                continue
-            name = _clean_latex(bold_match.group(1)).strip()
+        link_match = re.search(r'\\href\{([^}]+)\}', block)
+        link = link_match.group(1) if link_match else ""
 
-            desc_match = re.search(r'\\textit\{([^}]+)\}', block)
-            if desc_match:
-                description = _clean_latex(desc_match.group(1)).strip()
-
-        link_match = re.search(r'\\(?:href|url)\{([^}]+)\}', block)
-        if link_match:
-            link = link_match.group(1)
-
-        if not description:
-            text_desc_match = re.search(r'\\textbf\{[^}]+\}(.*?)(?=\\item|\\begin|$)', block, re.DOTALL)
-            if text_desc_match:
-                candidate_desc = _clean_latex(text_desc_match.group(1)).strip()
-                if len(candidate_desc) > 10:
-                    description = candidate_desc
-            elif cvevent_match:
-                desc_after = block[cvevent_match.end():]
-                desc_items = re.findall(r'\\item\s+(.*?)(?=\\item|\\end|$)', desc_after, re.DOTALL)
-                if not desc_items:
-                    candidate = _clean_latex(desc_after).strip()
-                    if len(candidate) > 10:
-                        description = candidate
+        desc_match = re.search(r'\\textit\{([^}]+)\}', block)
+        description = _clean_latex(desc_match.group(1)).strip() if desc_match else ""
 
         highlights = []
         items = re.findall(r'\\item\s+(.*?)(?=\\item|\\end|$)', block, re.DOTALL)

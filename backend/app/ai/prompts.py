@@ -84,8 +84,7 @@ RÈGLES D'EXTRACTION (TRÈS IMPORTANTES) :
 3. Pour la rubrique 'education', extrais uniquement ce qui est explicitement mentionné. N'invente jamais de diplômes ou de mentions.
 4. Corrige les éventuelles fautes de frappe liées à l'extraction de texte, mais conserve le sens exact.
 5. Sépare bien les compétences par catégories logiques si elles sont en vrac (ex: Langages, Outils, Frameworks).
-8. Pour les dates, essaie de les normaliser (ex: "Jan 2021", "2020", "Présent").
-9. Pour le format LaTeX, porte une attention particulière à extraire le nom et prénom (souvent dans \name{}, \author{}, ou \Huge{}), le titre professionnel (parfois sous le nom ou \cvtitle), les formations et la description complète des projets ainsi que leurs liens (\href, \url).
+6. Pour les dates, essaie de les normaliser (ex: "Jan 2021", "2020", "Présent").
 
 Renvoie UNIQUEMENT un objet JSON valide conforme à la structure suivante :
 {
