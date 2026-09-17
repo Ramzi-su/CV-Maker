@@ -405,6 +405,7 @@ def parse_pdf_text_to_profile(text: str) -> Dict[str, Any]:
     }
 
     lines = [l.strip() for l in text.splitlines() if l.strip()]
+    all_lines = [l.strip() for l in text.splitlines()]  # preserve blank lines for block splitting
     if not lines:
         return result
 
@@ -439,7 +440,13 @@ def parse_pdf_text_to_profile(text: str) -> Dict[str, Any]:
 
     # Location
     loc_patterns = [
-        r'(Paris|Lyon|Marseille|Toulouse|Bordeaux|Lille|Strasbourg|Nantes|Nice|Montpellier|Rennes)[^,\n]{0,20}(?:France)?',
+        r'(Paris|Lyon|Marseille|Toulouse|Bordeaux|Lille|Strasbourg|Nantes|Nice|Montpellier|Rennes|'
+        r'Grenoble|Toulon|Dijon|Angers|Brest|Limoges|Tours|Clermont|Rouen|Metz|Besançon|Orléans|'
+        r'Mulhouse|Caen|Perpignan|Amiens|Reims|Poitiers|Béziers|Saint-Étienne|Avignon|'
+        r'Casablanca|Rabat|Tunis|Alger|Bruxelles|Genève|Lausanne|Zurich|Montréal|Québec|Toronto|'
+        r'London|Berlin|Amsterdam|Dubai|Riyadh)[^,\n]{0,30}(?:,?\s*(?:France|Algérie|Maroc|Tunisie|'
+        r'Belgique|Suisse|Canada|UK|Germany|Netherlands|UAE|KSA))?',
+        r'\b(?:France|Algérie|Maroc|Tunisie|Belgique|Suisse|Canada)\b',
     ]
     for pat in loc_patterns:
         loc_m = re.search(pat, text, re.IGNORECASE)
@@ -451,47 +458,419 @@ def parse_pdf_text_to_profile(text: str) -> Dict[str, Any]:
     section_keywords = {
         "summary": ["profil", "résumé", "objectif", "about", "accroche", "summary"],
         "experiences": ["expérience", "experience", "parcours professionnel", "emploi"],
-        "education": ["formation", "education", "études", "diplôme"],
-        "skills": ["compétence", "skill", "technique", "technologie"],
-        "projects": ["projet", "project", "réalisation"],
-        "languages": ["langue", "language", "certification", "divers", "autre"],
+        "education": ["formation", "education", "études", "diplôme", "académique", "cursus", "scolarité"],
+        "skills": ["compétence", "competence", "skill", "compétences techniques"],
+        "projects": ["projet", "project", "réalisation", "portfolio"],
+        "languages": ["langues", "languages"],
+        "certifications": ["certification", "certif", "accréditation"],
+        "divers": ["divers", "autre", "intérêt", "loisir", "hobby"],
     }
 
-    # Find section boundaries
+    # Build a mapping from stripped-line index to all_lines index
+    stripped_to_all = []
+    for all_idx, al in enumerate(all_lines):
+        if al.strip():
+            stripped_to_all.append(all_idx)
+
+    # Find section boundaries (using stripped lines for detection)
     section_starts = []
-    full_text_lower = text.lower()
     for line_idx, line in enumerate(lines):
         line_lower = line.lower().strip()
+        if len(line) > 80 or len(line) < 3:
+            continue
+        is_likely_header = (
+            len(line) < 60
+            and not re.match(r'^\s*[-•–◦▪✓►➤→]', line)
+            and '@' not in line
+            and not re.match(r'^\d{4}', line)
+            and not re.match(r'^.+:\s+\S+.*\S', line)
+            and '|' not in line
+            and not re.search(r'\([^)]{3,}\)', line)
+        )
+        if not is_likely_header:
+            continue
         for sec_type, keywords in section_keywords.items():
-            if any(kw in line_lower for kw in keywords) and len(line) < 60:
+            if any(kw in line_lower for kw in keywords):
                 section_starts.append((line_idx, sec_type, line))
                 break
 
     for s_idx, (line_idx, sec_type, sec_title) in enumerate(section_starts):
         end_idx = section_starts[s_idx + 1][0] if s_idx + 1 < len(section_starts) else len(lines)
-        sec_lines = lines[line_idx + 1:end_idx]
+        # Map stripped indices back to all_lines to preserve blank line separators
+        all_start = stripped_to_all[line_idx] + 1 if line_idx < len(stripped_to_all) else 0
+        all_end = stripped_to_all[end_idx] if end_idx < len(stripped_to_all) else len(all_lines)
+        sec_lines = all_lines[all_start:all_end]
         sec_content = '\n'.join(sec_lines)
 
         if sec_type == "summary":
-            result["summary"] = ' '.join(sec_lines).strip()
+            result["summary"] = ' '.join(l for l in sec_lines if l.strip()).strip()
+
+        elif sec_type == "experiences":
+            result["experiences"] = _parse_pdf_experiences(sec_lines)
+
+        elif sec_type == "education":
+            result["education"] = _parse_pdf_education(sec_lines)
+
+        elif sec_type == "projects":
+            result["projects"] = _parse_pdf_projects(sec_lines)
 
         elif sec_type == "skills":
             for sl in sec_lines:
                 if ':' in sl:
                     parts = sl.split(':', 1)
                     cat_name = parts[0].strip()
-                    skills_list = [s.strip() for s in re.split(r'[,·•|]', parts[1]) if s.strip() and len(s.strip()) > 1]
+                    skills_list = [s.strip() for s in re.split(r'[,·•|/]', parts[1]) if s.strip() and len(s.strip()) > 1]
                     if cat_name and skills_list:
                         result["skill_categories"].append({"category": cat_name, "skills": skills_list})
+                elif re.match(r'^[-•–◦▪]\s*', sl):
+                    skill_text = re.sub(r'^[-•–◦▪]\s*', '', sl).strip()
+                    if skill_text:
+                        if result["skill_categories"]:
+                            result["skill_categories"][-1]["skills"].append(skill_text)
+                        else:
+                            result["skill_categories"].append({"category": "Compétences", "skills": [skill_text]})
 
         elif sec_type == "languages":
-            lang_items = re.findall(r'([A-ZÀ-Ö][a-zà-ö]+)\s*[\(:]?\s*([^),\n]+)', sec_content)
+            lang_items = re.findall(r'([A-ZÀ-Öa-zà-ö]+)\s*[\(:\-–]?\s*([^),\n]+)', sec_content)
             for name, level in lang_items:
-                if name.lower() not in ['certification', 'certifications', 'autre']:
-                    result["languages"].append({"name": name.strip(), "level": level.strip().rstrip(')')})
+                name_clean = name.strip()
+                level_clean = level.strip().rstrip(')').strip()
+                if name_clean.lower() not in ['certification', 'certifications', 'autre', 'divers', ''] and len(name_clean) > 1:
+                    result["languages"].append({"name": name_clean, "level": level_clean})
+
+        elif sec_type == "certifications":
+            for sl in sec_lines:
+                cleaned = re.sub(r'^[-•–◦▪]\s*', '', sl).strip()
+                if cleaned and len(cleaned) > 3:
+                    result["certifications"].append(cleaned)
+
+    # Website
+    web_m = re.search(r'https?://(?!linkedin|github)[^\s,}]+', text, re.IGNORECASE)
+    if web_m:
+        result["contact"]["website"] = web_m.group(0).rstrip('.')
+
+    # Title: try the line right after the name in the first few lines
+    if not result["contact"]["title"]:
+        name = result["contact"]["full_name"]
+        for idx, line in enumerate(lines[:8]):
+            if line.strip() == name:
+                for next_line in lines[idx + 1:idx + 3]:
+                    next_clean = next_line.strip()
+                    if next_clean and '@' not in next_clean and not re.match(r'^[\d\s+\-()/]+$', next_clean) and len(next_clean) < 80:
+                        if not re.search(r'linkedin|github|http', next_clean, re.IGNORECASE):
+                            result["contact"]["title"] = next_clean
+                            break
+                break
+
+    # Fallback title from first experience role
+    if not result["contact"]["title"] and result["experiences"]:
+        result["contact"]["title"] = result["experiences"][0].get("role", "")
 
     # If we only extracted name and email, add raw text as summary for manual editing
     if not result["summary"] and not result["experiences"] and not result["skill_categories"]:
         result["summary"] = "Profil importé depuis un PDF. Veuillez compléter les sections manuellement.\n\n" + text[:500]
 
     return result
+
+
+# --- Date pattern constant for reuse ---
+_DATE_PATTERN = (
+    r'(?:(?:Janv?\.?|Févr?\.?|Mars?|Avr\.?|Mai|Juin|Juil\.?|Août|Sept?\.?|Oct\.?|Nov\.?|Déc\.?|'
+    r'January?|February?|March?|April?|May|June?|July?|August?|Septemb(?:er|re)?|Octob(?:er|re)?|'
+    r'Novemb(?:er|re)?|Decemb(?:er|re)?|Décemb(?:er|re)?)\s*\.?\s*\d{4}|\d{4})'
+)
+_DATE_RANGE_PATTERN = (
+    _DATE_PATTERN + r'\s*(?:[-–—]|à)\s*(?:' + _DATE_PATTERN + r'|[Pp]résent|[Pp]resent|[Aa]ujourd)'
+)
+
+
+def _split_into_blocks(lines: List[str]) -> List[List[str]]:
+    """Split lines into logical blocks separated by blank lines, then merge orphan headers."""
+    raw_blocks = []
+    current_block = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if current_block:
+                raw_blocks.append(current_block)
+                current_block = []
+            continue
+        current_block.append(stripped)
+    if current_block:
+        raw_blocks.append(current_block)
+
+    # Merge: if a block has only 1-2 lines with no bullets and the next block starts with a date,
+    # merge them into one entry
+    merged = []
+    i = 0
+    while i < len(raw_blocks):
+        block = raw_blocks[i]
+        has_bullets = any(re.match(r'^[-•–◦▪✓►➤→]', l) for l in block)
+        has_date = any(re.search(_DATE_RANGE_PATTERN, l, re.IGNORECASE) for l in block)
+
+        # Short header block (no date, no bullets) followed by another block
+        if not has_bullets and not has_date and len(block) <= 2 and i + 1 < len(raw_blocks):
+            next_block = raw_blocks[i + 1]
+            next_has_date = any(re.search(_DATE_RANGE_PATTERN, l, re.IGNORECASE) for l in next_block)
+            if next_has_date:
+                merged.append(block + next_block)
+                i += 2
+                continue
+
+        merged.append(block)
+        i += 1
+
+    return merged
+
+
+def _extract_date_range(text: str):
+    """Extract start_date and end_date from a text string."""
+    m = re.search(_DATE_RANGE_PATTERN, text, re.IGNORECASE)
+    if m:
+        full_match = m.group(0)
+        parts = re.split(r'\s*(?:[-–—]|à)\s*', full_match, maxsplit=1)
+        start = parts[0].strip() if len(parts) > 0 else ""
+        end = parts[1].strip() if len(parts) > 1 else "Présent"
+        return start, end, m.start(), m.end()
+    # Try single year
+    m2 = re.search(r'\b(\d{4})\b', text)
+    if m2:
+        return m2.group(1), "", m2.start(), m2.end()
+    return "", "", -1, -1
+
+
+def _extract_bullets(lines: List[str]) -> List[str]:
+    """Extract bullet points from lines."""
+    bullets = []
+    for line in lines:
+        stripped = line.strip()
+        bullet_m = re.match(r'^[-•–◦▪✓►➤→]\s*(.+)', stripped)
+        if bullet_m:
+            text = bullet_m.group(1).strip()
+            if text and len(text) > 5:
+                bullets.append(text)
+    return bullets
+
+
+def _extract_technologies_from_text(text: str) -> List[str]:
+    """Extract technology keywords from a text block."""
+    tech_m = re.search(r'(?:Technologies?|Tech|Stack|Outils|Environnement)\s*:\s*(.+?)(?:\n|$)', text, re.IGNORECASE)
+    if tech_m:
+        tech_str = tech_m.group(1)
+        return [t.strip() for t in re.split(r'[,·•|/]', tech_str) if t.strip() and len(t.strip()) > 1]
+    return []
+
+
+def _parse_pdf_experiences(sec_lines: List[str]) -> List[Dict]:
+    """Parse experience entries from plain text lines."""
+    experiences = []
+    blocks = _split_into_blocks(sec_lines)
+
+    for block in blocks:
+        if not block:
+            continue
+        block_text = '\n'.join(block)
+
+        start_date, end_date, d_start, d_end = _extract_date_range(block_text)
+
+        # The first line (or first two lines) typically contain role and company
+        header_lines = []
+        bullet_lines = []
+        for line in block:
+            # Bullet points
+            if re.match(r'^[-•–◦▪✓►➤→]\s*', line):
+                bullet_lines.append(line)
+            # Date-only lines (just a date range on its own line)
+            elif re.match(_DATE_RANGE_PATTERN + r'\s*$', line.strip(), re.IGNORECASE):
+                continue  # skip, date already extracted from block_text
+            # "Technologies : ..." lines go to bullet_lines for tech extraction
+            elif re.match(r'^(?:Technologies?|Tech|Stack|Outils|Environnement)\s*:', line, re.IGNORECASE):
+                bullet_lines.append(line)
+            else:
+                if not bullet_lines:
+                    header_lines.append(line)
+                else:
+                    bullet_lines.append(line)
+
+        if not header_lines:
+            continue
+
+        # Try to identify role and company from header lines
+        role = ""
+        company = ""
+        location = ""
+
+        # Remove date ranges from header text for cleaner parsing
+        header_text = ' | '.join(header_lines)
+        header_clean = re.sub(_DATE_RANGE_PATTERN, '', header_text, flags=re.IGNORECASE).strip()
+        header_clean = re.sub(r'\s*[|–—-]\s*$', '', header_clean).strip()
+        header_clean = re.sub(r'^\s*[|–—-]\s*', '', header_clean).strip()
+
+        # Split by common delimiters: |, –, —, -, comma
+        header_parts = re.split(r'\s*[|–—]\s*', header_clean)
+        header_parts = [p.strip().strip(',').strip() for p in header_parts if p.strip()]
+
+        if len(header_parts) >= 3:
+            role = header_parts[0]
+            company = header_parts[1]
+            location = header_parts[2]
+        elif len(header_parts) == 2:
+            role = header_parts[0]
+            company = header_parts[1]
+        elif len(header_parts) == 1 and header_parts[0]:
+            # Single header: might be "Role, Company" or "Role - Company" separated by comma
+            comma_parts = [p.strip() for p in header_parts[0].split(',') if p.strip()]
+            if len(comma_parts) >= 2:
+                role = comma_parts[0]
+                company = comma_parts[1]
+                if len(comma_parts) >= 3:
+                    location = comma_parts[2]
+            else:
+                role = header_parts[0]
+
+        highlights = _extract_bullets(bullet_lines)
+        technologies = _extract_technologies_from_text(block_text)
+
+        if role or company:
+            experiences.append({
+                "id": f"exp-import-{len(experiences)}",
+                "role": role,
+                "company": company,
+                "location": location,
+                "start_date": start_date,
+                "end_date": end_date if end_date else "Présent",
+                "highlights": highlights,
+                "technologies": technologies,
+            })
+
+    return experiences
+
+
+def _parse_pdf_education(sec_lines: List[str]) -> List[Dict]:
+    """Parse education entries from plain text lines."""
+    education = []
+    blocks = _split_into_blocks(sec_lines)
+
+    for block in blocks:
+        if not block:
+            continue
+        block_text = '\n'.join(block)
+
+        start_date, end_date, _, _ = _extract_date_range(block_text)
+        year = ""
+        if start_date and end_date:
+            year = f"{start_date} - {end_date}"
+        elif start_date:
+            year = start_date
+
+        header_lines = []
+        detail_lines = []
+        for line in block:
+            if re.match(r'^[-•–◦▪✓►➤→]\s*', line):
+                detail_lines.append(re.sub(r'^[-•–◦▪✓►➤→]\s*', '', line).strip())
+            elif re.match(_DATE_RANGE_PATTERN + r'\s*$', line.strip(), re.IGNORECASE):
+                continue
+            elif re.match(r'^\d{4}\s*$', line.strip()):
+                continue
+            elif not detail_lines:
+                header_lines.append(line)
+            else:
+                detail_lines.append(line)
+
+        if not header_lines:
+            continue
+
+        header_text = ' | '.join(header_lines)
+        header_clean = re.sub(_DATE_RANGE_PATTERN, '', header_text, flags=re.IGNORECASE).strip()
+        header_clean = re.sub(r'\b\d{4}\b', '', header_clean).strip()
+        header_clean = re.sub(r'\s*[|–—-]\s*$', '', header_clean).strip()
+        header_clean = re.sub(r'^\s*[|–—-]\s*', '', header_clean).strip()
+
+        header_parts = re.split(r'\s*[|–—]\s*', header_clean)
+        header_parts = [p.strip().strip(',').strip() for p in header_parts if p.strip()]
+
+        degree = ""
+        institution = ""
+        location = ""
+
+        if len(header_parts) >= 3:
+            degree = header_parts[0]
+            institution = header_parts[1]
+            location = header_parts[2]
+        elif len(header_parts) == 2:
+            degree = header_parts[0]
+            institution = header_parts[1]
+        elif len(header_parts) == 1 and header_parts[0]:
+            comma_parts = [p.strip() for p in header_parts[0].split(',') if p.strip()]
+            if len(comma_parts) >= 2:
+                degree = comma_parts[0]
+                institution = comma_parts[1]
+                if len(comma_parts) >= 3:
+                    location = comma_parts[2]
+            else:
+                degree = header_parts[0]
+
+        details = ' '.join(detail_lines).strip() if detail_lines else ""
+
+        if degree or institution:
+            education.append({
+                "id": f"edu-import-{len(education)}",
+                "degree": degree,
+                "institution": institution,
+                "location": location,
+                "year": year,
+                "details": details,
+            })
+
+    return education
+
+
+def _parse_pdf_projects(sec_lines: List[str]) -> List[Dict]:
+    """Parse project entries from plain text lines."""
+    projects = []
+    blocks = _split_into_blocks(sec_lines)
+
+    for block in blocks:
+        if not block:
+            continue
+        block_text = '\n'.join(block)
+
+        header_lines = []
+        bullet_lines = []
+        for line in block:
+            if re.match(r'^[-•–◦▪✓►➤→]\s*', line):
+                bullet_lines.append(line)
+            elif not bullet_lines:
+                header_lines.append(line)
+            else:
+                bullet_lines.append(line)
+
+        if not header_lines:
+            continue
+
+        name = header_lines[0].strip()
+        # Remove date from name if present
+        name = re.sub(_DATE_RANGE_PATTERN, '', name, flags=re.IGNORECASE).strip()
+        name = name.strip('|–—- ,')
+
+        # Description from remaining header lines
+        description = ' '.join(header_lines[1:]).strip() if len(header_lines) > 1 else ""
+
+        # Link
+        link_m = re.search(r'(https?://[^\s,)]+)', block_text)
+        link = link_m.group(1).rstrip('.') if link_m else ""
+
+        highlights = _extract_bullets(bullet_lines)
+        technologies = _extract_technologies_from_text(block_text)
+
+        if name and len(name) > 2:
+            projects.append({
+                "id": f"proj-import-{len(projects)}",
+                "name": name,
+                "description": description,
+                "highlights": highlights,
+                "technologies": technologies,
+                "link": link,
+            })
+
+    return projects
