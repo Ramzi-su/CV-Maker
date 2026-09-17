@@ -81,7 +81,10 @@ Ta mission est de lire le texte brut extrait d'un CV (PDF ou LaTeX) et de le str
 RÈGLES D'EXTRACTION (TRÈS IMPORTANTES) :
 1. NE RIEN INVENTER (ZÉRO HALLUCINATION). Si une information (comme une date, une entreprise, ou une formation) est absente, laisse la chaîne vide ("") ou une liste vide ([]).
 2. Pour les expériences et les stages, n'écris 'Présent' que si le poste est EN COURS. S'il s'agit d'un stage passé, trouve la date de fin exacte ou laisse vide si inconnu, NE METS PAS 'Présent'.
-3. Pour la rubrique 'education', extrais uniquement ce qui est explicitement mentionné. N'invente jamais de diplômes ou de mentions.
+3. ATTENTION AUX SECTIONS : Ne confonds pas les Projets, les Expériences (Stages/Emplois) et les Formations (Éducation).
+   - Un Projet académique ou personnel DOIT aller dans 'projects', avec son nom dans 'name'.
+   - Un Diplôme (ex: Ingénieur, Baccalauréat) ou une École (ex: Institute, High School) DOIT aller dans 'education', JAMAIS dans 'experiences' ni 'projects'.
+   - Un Stage (Internship) ou Emploi DOIT aller dans 'experiences', avec le titre du poste dans 'role' (et non dans company!) et le nom de l'entreprise dans 'company'.
 4. Corrige les éventuelles fautes de frappe liées à l'extraction de texte, mais conserve le sens exact.
 5. Sépare bien les compétences par catégories logiques si elles sont en vrac (ex: Langages, Outils, Frameworks).
 6. Pour les dates, essaie de les normaliser (ex: "Jan 2021", "2020", "Présent").
