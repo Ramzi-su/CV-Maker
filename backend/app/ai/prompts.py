@@ -112,6 +112,8 @@ Renvoie UNIQUEMENT un objet JSON valide conforme à la structure suivante :
     {
       "name": "Nom du projet",
       "description": "Description",
+      "year": "Année ou période du projet (ex: 2021 - 2023)",
+      "company": "Société, école, ou organisation (si applicable)",
       "highlights": ["Point clé"],
       "technologies": ["Tech 1", "Tech 2"],
       "link": "Lien URL si présent"

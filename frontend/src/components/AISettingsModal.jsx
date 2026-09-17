@@ -11,7 +11,7 @@ const PROVIDERS = [
   { id: 'ollama', name: 'Ollama Local', desc: 'Modèles locaux privés & gratuits', badge: 'Privé', badgeColor: 'bg-amber-500/15 text-amber-400', needsKey: false, needsModel: true, needsUrl: true, defaultModel: 'llama3', models: ['llama3', 'llama3.1', 'mistral', 'qwen2.5', 'codellama', 'gemma2', 'phi3', 'deepseek-coder-v2'] },
   { id: 'gemini', name: 'Google Gemini', desc: 'Haute fidélité via Google AI', badge: 'Cloud', badgeColor: 'bg-blue-500/15 text-blue-400', needsKey: true, needsModel: true, needsUrl: false, defaultModel: 'gemini-2.5-flash', models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'] },
   { id: 'openai', name: 'OpenAI / ChatGPT', desc: 'GPT-4o et modèles OpenAI', badge: 'Cloud', badgeColor: 'bg-purple-500/15 text-purple-400', needsKey: true, needsModel: true, needsUrl: false, defaultModel: 'gpt-4o-mini', models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
-  { id: 'groq', name: 'Groq', desc: 'Inférence ultra-rapide (LPU)', badge: 'Cloud', badgeColor: 'bg-orange-500/15 text-orange-400', needsKey: true, needsModel: true, needsUrl: false, defaultModel: 'openai/gpt-oss-120b', models: ['openai/gpt-oss-120b', 'llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'] },
+  { id: 'groq', name: 'Groq', desc: 'Inférence ultra-rapide (LPU)', badge: 'Cloud', badgeColor: 'bg-orange-500/15 text-orange-400', needsKey: true, needsModel: true, needsUrl: false, defaultModel: '', models: ['openai/gpt-oss-120b', 'llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'llama3-70b-8192', 'llama3-8b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it'] },
   { id: 'deepseek', name: 'DeepSeek', desc: 'Modèles de raisonnement avancé', badge: 'Cloud', badgeColor: 'bg-cyan-500/15 text-cyan-400', needsKey: true, needsModel: true, needsUrl: false, defaultModel: 'deepseek-chat', models: ['deepseek-chat', 'deepseek-reasoner'] },
 ];
 
@@ -144,7 +144,7 @@ export default function AISettingsModal({ isOpen, onClose, settings, onSave }) {
                     onChange={(e) => setFormData({ ...formData, modelName: e.target.value })}
                     className="input-dark w-full appearance-none pr-8 cursor-pointer"
                   >
-                    <option value="">Par défaut ({selectedProvider.defaultModel})</option>
+                    <option value="">{selectedProvider.defaultModel ? `Par défaut (${selectedProvider.defaultModel})` : 'Sélectionner un modèle...'}</option>
                     {selectedProvider.models?.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
