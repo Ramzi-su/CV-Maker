@@ -73,7 +73,10 @@ def parse_latex_cv(latex_code: str) -> Dict[str, Any]:
     for pat in email_patterns:
         m = re.search(pat, cleaned)
         if m:
-            result["contact"]["email"] = m.group(1) if '(' in pat or '{' in pat else m.group(0)
+            if m.groups():
+                result["contact"]["email"] = m.group(1)
+            else:
+                result["contact"]["email"] = m.group(0)
             break
 
     # Phone
