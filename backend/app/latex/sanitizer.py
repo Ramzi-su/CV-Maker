@@ -23,6 +23,7 @@ COMMON_REPLACEMENTS = [
     (re.compile(r'[«»]'), "''"),
     (re.compile(r'…'), '...'),
     (re.compile(r'–|—'), '--'),
+    (re.compile(r'[\u202f\u00a0]'), ' '),
 ]
 
 
